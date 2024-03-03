@@ -5,7 +5,7 @@ use std::thread;
 use std::sync::Arc;
 use rayon::prelude::*;
 
-#[path = "../utils/aoc_file.rs"] mod aoc_file;
+use aoc_2016::utils::aoc_file;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct Triangle(u32, u32, u32);

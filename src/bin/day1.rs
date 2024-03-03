@@ -1,4 +1,4 @@
-#[path = "../utils/aoc_file.rs"] mod aoc_file;
+use aoc_2016::utils::aoc_file;
 
 pub mod distance_solver {
     use std::collections::HashSet;
