@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 
-#[path = "../utils/aoc_file.rs"] mod aoc_file;
+use aoc_2016::utils::aoc_file;
 
 mod room {
     use std::collections::HashMap;
