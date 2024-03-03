@@ -16,8 +16,6 @@ pub enum TriangleError {
     IntParseError,
     #[error("Failed to parse file")]
     ParsingError,
-    #[error("Internal error")]
-    InternalError,
 }
 
 fn possible_triangle(triangle: &Triangle) -> bool {
@@ -64,7 +62,7 @@ where T: AsRef<str>
                 sides.iter().enumerate().for_each(|(i, side)| current_triangles[i].2 = *side);
                 triangles.append(&mut current_triangles);
             }
-            _ => return Err(TriangleError::InternalError)
+            _ => unreachable!()
         }
         index = (index + 1) % 3;
     }
