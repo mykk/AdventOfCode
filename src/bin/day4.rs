@@ -15,7 +15,7 @@ mod room {
     impl Room {
         fn parse_checksum(last_part: &str) -> Option<&str> {
             last_part.find('[').and_then(|i|last_part[i + 1 ..].find(']').and_then(|j| {
-                Some(&last_part[i + 1 .. j])
+                Some(&last_part[i + 1 .. i + 1 + j])
             }))
         }
 
@@ -25,11 +25,17 @@ mod room {
 
         fn checksum_from_encoding(&self) -> String
         {   
-            let char_counts = self.encoding_parts.iter()
-                .flat_map(|part| part.chars())
-                .fold(HashMap::new(), |mut acc, c| { 
+            let char_counts = self.encoding_parts.par_iter()
+                .flat_map(|part| part.par_chars())
+                .fold(||HashMap::new(), |mut acc, c| { 
                     *acc.entry(c).or_insert(0) += 1; 
                     acc
+                })
+                .reduce(||HashMap::new(), |mut acc1, acc2|{
+                    for (c, v) in acc2 {
+                        *acc1.entry(c).or_insert(0) += v; 
+                     }
+                     acc1
                 });
          
             let mut sorted_chars: Vec<char> = char_counts.par_iter().map(|item|{ *item.0 }).collect();
@@ -148,6 +154,15 @@ mod tests {
     #[test]
     fn test_room_parse4() {
         let room = Room::parse_from("totally-real-room-200[decoy]");
+        assert!(room.is_some());
+
+        let room = room.unwrap();
+        assert!(!room.get_is_real());
+    }
+
+    #[test]
+    fn test_room_parse5() {
+        let room = Room::parse_from("aaaaa-bbb-z-y-x-123[abxyd]");
         assert!(room.is_some());
 
         let room = room.unwrap();
