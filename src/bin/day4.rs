@@ -1,7 +1,3 @@
-use rayon::prelude::*;
-
-use aoc_2016::utils::aoc_file;
-
 mod room {
     use std::collections::HashMap;
     use rayon::prelude::*;
@@ -74,40 +70,22 @@ mod room {
                 .collect::<Vec<_>>()
                 .join(" ")
         }
-
     }
 
 }
 
 fn main() {
-    let rooms = match aoc_file::open_and_read_file(&mut std::env::args()) {
-        Ok(data) => 
-        {
-            data.par_lines()
-            .map(|line| room::Room::parse_from(line))
-            .collect::<Option<Vec<_>>>()
-        }
-        Err(_) => {
-            eprintln!("Error while reading the file");
-            std::process::exit(1);
-        }
-    };
+    use rayon::prelude::*;
+    use aoc_2016::utils::aoc_file;
 
-    let rooms = match &rooms {
-        Some(rooms) => rooms.par_iter().filter(|room| room.get_is_real()).collect::<Vec<_>>(),
-        None => {
-            eprintln!("File parsing error");
-            std::process::exit(1);
-        }
-    };
-    
-    println!("part 1: {}", rooms.par_iter().map(|room|room.get_num()).sum::<u32>());
-    match rooms.par_iter().find_any(|room| room.get_decrypted_name() == "northpole object storage") {
-        Some(room) => println!("part 2: {}", room.get_num()),
-        None => println!("did not find the northpole object storage!!")
-    }
+    let rooms = aoc_file::open_and_read_file(&mut std::env::args()).unwrap();
+    let rooms = rooms.par_lines()
+        .map(|line| room::Room::parse_from(line).expect("File parsing error")) 
+        .filter(|room| room.get_is_real());
+
+    println!("part 1: {}", rooms.clone().fold(||0, |sum, room| sum + room.get_num()).sum::<u32>());
+    println!("part 2: {}", rooms.find_any(|room| room.get_decrypted_name() == "northpole object storage").expect("did not find the northpole object storage!").get_num());
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -171,5 +149,4 @@ mod tests {
         assert!(room.get_decrypted_name() == "very encrypted name");
         assert!(room.get_num() == 343);
     }
-    
 }
