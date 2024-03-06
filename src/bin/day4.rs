@@ -25,17 +25,11 @@ mod room {
 
         fn checksum_from_encoding(&self) -> String
         {   
-            let char_counts = self.encoding_parts.par_iter()
-                .flat_map(|part| part.par_chars())
-                .fold(||HashMap::new(), |mut acc, c| { 
+            let char_counts = self.encoding_parts.iter()
+                .flat_map(|part| part.chars())
+                .fold(HashMap::new(), |mut acc, c| { 
                     *acc.entry(c).or_insert(0) += 1; 
                     acc
-                })
-                .reduce(||HashMap::new(), |mut acc1, acc2|{
-                    for (c, v) in acc2 {
-                        *acc1.entry(c).or_insert(0) += v; 
-                     }
-                     acc1
                 });
          
             let mut sorted_chars: Vec<char> = char_counts.par_iter().map(|item|{ *item.0 }).collect();
@@ -89,10 +83,8 @@ fn main() {
     let rooms = match aoc_file::open_and_read_file(&mut std::env::args()) {
         Ok(data) => 
         {
-            data.split('\n')
-            .collect::<Vec<_>>()
-            .par_iter()
-            .map(|line| room::Room::parse_from(line.strip_prefix('\r').unwrap_or(line)))
+            data.par_lines()
+            .map(|line| room::Room::parse_from(line))
             .collect::<Option<Vec<_>>>()
         }
         Err(_) => {
