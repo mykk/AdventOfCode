@@ -83,10 +83,8 @@ fn main() {
     let rooms = match aoc_file::open_and_read_file(&mut std::env::args()) {
         Ok(data) => 
         {
-            data.split('\n')
-            .collect::<Vec<_>>()
-            .par_iter()
-            .map(|line| room::Room::parse_from(line.strip_prefix('\r').unwrap_or(line)))
+            data.par_lines()
+            .map(|line| room::Room::parse_from(line))
             .collect::<Option<Vec<_>>>()
         }
         Err(_) => {
