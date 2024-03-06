@@ -1,5 +1,3 @@
-use aoc_2016::utils::aoc_file;
-
 pub mod keypad_solver {
     #[derive(Debug, Clone, Copy, PartialEq)]
     pub enum Direction {
@@ -132,21 +130,16 @@ pub mod keypad_solver {
     }
 }
 
-fn main() {    
-    use crate::keypad_solver::{AocPart1Solver, AocPart2Solver, KeypadSolver};
+fn main() {
+    use aoc_2016::utils::aoc_file;
 
-    let directions = match aoc_file::open_and_read_file(&mut std::env::args()) {
-        Ok(contents) => keypad_solver::parse_directions(&contents),
-        Err(_) => {
-            eprintln!("Error reading file");
-            std::process::exit(1);
-        }
-    }.expect("Failed to parse the file");
+    let directions = aoc_file::open_and_read_file(&mut std::env::args()).expect("Error reading file");
+    let directions = keypad_solver::parse_directions(&directions).expect("Failed to parse the file");
 
-    let solver = KeypadSolver::new(Box::new(AocPart1Solver::new()));
+    let solver = keypad_solver::KeypadSolver::new(Box::new(keypad_solver::AocPart1Solver::new()));
     println!("The answer to part 1 is {}", solver.solve(&directions));
 
-    let solver = KeypadSolver::new(Box::new(AocPart2Solver::new()));
+    let solver = keypad_solver::KeypadSolver::new(Box::new(keypad_solver::AocPart2Solver::new()));
     println!("The answer to part 2 is {}", solver.solve(&directions));
 }
 

@@ -116,20 +116,11 @@ pub mod distance_solver {
 }
 
 fn main() {    
-    let mv_instructions = match aoc_file::open_and_read_file(&mut std::env::args()) {
-        Ok(content) => distance_solver::parse_input(&content),
-        Err(_) => {
-            eprintln!("Error reading file");
-            std::process::exit(1);
-        }
-    }.expect("Failed to parse the file");
+    let mv_instructions = aoc_file::open_and_read_file(&mut std::env::args()).expect("Error reading file");
+    let mv_instructions = distance_solver::parse_input(&mv_instructions).expect("Failed to parse the file");
 
-    println!("The answer to part 1 is {}", distance_solver::get_full_distance(&mv_instructions));
-
-    match distance_solver::get_first_duplicate_position_dist(&mv_instructions) {
-        Some(val) => println!("The answer to part 2 is {}", val),
-        None  => println!("No duplicate position found.")
-    };
+    println!("part: {}", distance_solver::get_full_distance(&mv_instructions));
+    println!("part 2: {}", distance_solver::get_first_duplicate_position_dist(&mv_instructions).expect("No duplicate position found."));
 }
 
 #[cfg(test)]

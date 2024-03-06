@@ -87,39 +87,15 @@ where
 }
 
 fn main() {
-    let possible_triangles = match aoc_file::open_and_read_file(&mut std::env::args()) {
-        Ok(data) => 
-        {
-            let lines: Arc<Vec<String>> = Arc::new(data.split('\n')
-                .map(|line| line.strip_prefix('\r')
-                .unwrap_or(line).to_string())
-                .collect());
-
-            let lines_clone = Arc::clone(&lines);    
-            let thread1 = thread::spawn(move|| {
-                parse_and_count_possible_triangles(&lines_clone, parse_data_part1)
-            });
-
-            let thread2 = thread::spawn(move|| {
-                parse_and_count_possible_triangles(&lines, parse_data_part2)
-            });
-            (thread1.join().unwrap(), thread2.join().unwrap())
-        }
-        Err(_) => {
-            eprintln!("Error reading file");
-            std::process::exit(1);
-        }
-    };
-    match possible_triangles.0 {
-        Ok(possible_triangles) => println!("Part 1: {}", possible_triangles),
-        Err(err) => println!("Failed to get result for part 1: {}", err)
-    }
-
-    match possible_triangles.1 {
-        Ok(possible_triangles) => println!("Part 2: {}", possible_triangles),
-        Err(err) => println!("Failed to get result for part 2: {}", err)
-    }
+    let data = aoc_file::open_and_read_file(&mut std::env::args()).expect("Error reading file");
+    let lines: Arc<Vec<String>> = Arc::new(data.lines().map(|line| line.to_string()).collect::<Vec::<_>>());
     
+    let lines_clone = Arc::clone(&lines);    
+    let thread1 = thread::spawn(move|| { parse_and_count_possible_triangles(&lines_clone, parse_data_part1) });
+    let thread2 = thread::spawn(move|| { parse_and_count_possible_triangles(&lines, parse_data_part2) });
+    
+    println!("Part 1: {}", thread1.join().unwrap().expect("Failed to get result for part 1"));
+    println!("Part 2: {}", thread2.join().unwrap().expect("Failed to get result for part 2"));    
 }
 
 #[cfg(test)]
