@@ -1,5 +1,5 @@
 pub mod door_hacking {
-    use std::{collections::HashSet, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Mutex}};
+    use std::{collections::HashSet, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Mutex}, usize};
 
     use md5;
 
@@ -33,11 +33,10 @@ pub mod door_hacking {
     
                             let i = index.fetch_add(1, Ordering::Relaxed);
         
-                            let digest = format!("{:x}", md5::compute(door_id.to_string() + i.to_string().as_ref()));
+                            let digest = format!("{:x}", md5::compute(format!("{}{}", door_id, i)));
                             if digest.starts_with("00000") {
                                 let mut thread_cache = thread_cache.lock().unwrap();
                                 thread_cache.push((digest, i));
-                                thread_cache.sort_by_key(|(_, pos)|{*pos});
     
                                 if self.hack_algorithm.lock().unwrap().hacked(&thread_cache) {
                                     terminate.store(true, Ordering::Relaxed);
@@ -48,9 +47,9 @@ pub mod door_hacking {
                     });
                 }
             });
+            cache.sort_by_key(|(_, pos)|{*pos});
             return self.hack_algorithm.lock().unwrap().extract(cache)
         }
-        
     }
     
     pub trait HackAlgorithm : Send {
@@ -61,15 +60,11 @@ pub mod door_hacking {
     pub struct HackFirstDoor;
     impl HackAlgorithm for HackFirstDoor {
         fn hacked(&self, cache: &[(String, usize)]) -> bool {
-            cache.len() == 8
+            cache.len() >= 8
         }
 
         fn extract(&self, cache: &[(String, usize)]) -> String {
-            let mut password = String::new();
-            for i in 0..8 {
-                password.push(cache[i].0.chars().nth(5).unwrap());
-            }
-            password
+            cache.iter().take(8).map(|(digest, _)| digest.chars().nth(5).unwrap()).collect()
         }
     }
 
@@ -78,23 +73,22 @@ pub mod door_hacking {
 
         fn hacked(&self, cache: &[(String, usize)]) -> bool {
             cache.iter().fold(HashSet::new(), |mut counter, (digest, _)|{
-                if let Ok(i) = digest.chars().nth(5).unwrap().to_string().parse::<usize>() {
+                if let Some(i) = digest.chars().nth(5).unwrap().to_digit(10) {
                     if i < 8 { counter.insert(i); }
                 }
                 counter
-            }).len() >= 8
+            }).len() == 8
         }
 
         fn extract(&self, cache: &[(String, usize)]) -> String {
-            let password = cache.iter().fold([None; 8], |mut password, (digest, _) | {
-                if let Ok(i) = digest.chars().nth(5).unwrap().to_string().parse::<usize>() {
+            cache.iter().fold([None; 8], |mut password, (digest, _)| {
+                if let Some(i) = digest.chars().nth(5).unwrap().to_digit(10).map(|i| i as usize) {
                     if i < 8 && password[i].is_none() {
                         password[i] = Some(digest.chars().nth(6).unwrap()); //unwrap to crash if not found
                     }
                 }    
                 password
-            });
-            password.iter().map(|c| c.unwrap()).collect()
+            }).iter().map(|c| c.unwrap()).collect()
         }
     }
 }
@@ -153,6 +147,16 @@ mod tests {
 
         let hack = door_hacking::HackTheDoor::new(Box::new(door_hacking::HackSecondDoor{}));
         assert_eq!("05ace8e3", hack.hack_the_door("abc", &mut cache));
+    }
+
+    #[test]
+    fn hack_first_door_with_second_door_cache() {
+        let mut cache = Vec::new();
+        let hack = door_hacking::HackTheDoor::new(Box::new(door_hacking::HackSecondDoor{}));
+        assert_eq!("05ace8e3", hack.hack_the_door("abc", &mut cache));
+
+        let hack = door_hacking::HackTheDoor::new(Box::new(door_hacking::HackFirstDoor{}));
+        assert_eq!("18f47a30", hack.hack_the_door("abc", &mut cache));
     }
 
     #[test]
