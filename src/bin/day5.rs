@@ -1,110 +1,113 @@
 pub mod door_hacking {
+    use std::{collections::HashSet, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex}, thread};
+
     use md5;
 
-    pub struct HackTheDoor<T> {
-        hack_algorithm: Box<dyn HackAlgorithm<T>>
+    pub struct HackTheDoor {
+        hack_algorithm: Arc<Mutex<Box<dyn HackAlgorithm>>>
     }
 
-    impl<T> HackTheDoor<T> {
-        pub fn new(hack_algorithm: Box<dyn HackAlgorithm<T>>) -> Self {
-            Self{hack_algorithm}
+    impl HackTheDoor {
+        pub fn new(hack_algorithm: Box<dyn HackAlgorithm>) -> Self {
+            Self{hack_algorithm: Arc::new(Mutex::new(hack_algorithm))}
         }
 
-        fn get_initial_state(&self) -> T {
-            self.hack_algorithm.get_initial_state()
-        } 
+        pub fn hack_the_door(&self, door_id: &str, cache: &mut Vec<(String, usize)>) -> String {
+            const THREAD_COUNT: usize = 8;
+        
+            if self.hack_algorithm.lock().unwrap().hacked(cache) {
+                return self.hack_algorithm.lock().unwrap().extract(cache);
+            }
+    
+            let thread_cache = Arc::new(Mutex::new(cache.clone()));
+            let index = Arc::new(AtomicUsize::new(cache.last().map(|(_, pos)| *pos + 1).unwrap_or(0)));
+            let terminate = Arc::new(AtomicBool::new(false));
+            let mut thread_handles = Vec::new();
+    
+            for _ in 0..THREAD_COUNT {
+                let door_id = door_id.to_string();
+                let thread_cache = Arc::clone(&thread_cache);
+                let index = Arc::clone(&index);
+                let terminate = terminate.clone();
+                let hack_algorithm = self.hack_algorithm.clone();
+                let handle = thread::spawn(move || {
+                    loop {
+                        if terminate.load(Ordering::Relaxed) {
+                            return;
+                        }
 
-        fn hacked(&self, password: &T) -> bool {
-            self.hack_algorithm.hacked(password)
-        }
+                        let i = index.fetch_add(1, Ordering::Relaxed);
+    
+                        let digest = format!("{:x}", md5::compute(door_id.clone() + i.to_string().as_ref()));
+                        if digest.starts_with("00000") {
+                            let mut thread_cache = thread_cache.lock().unwrap();
+                            thread_cache.push((digest, i));
+                            thread_cache.sort_by_key(|(_, pos)|{*pos});
 
-        fn hack(&self, password: &mut T, digest: &str) {
-            self.hack_algorithm.hack(password, digest);
-        }
+                            let hack_algorithm = hack_algorithm.lock().unwrap();
+                            let hack_algorithm = hack_algorithm.as_ref();
 
-        fn extract(&self, password: &T) -> String {
-            self.hack_algorithm.extract(password)
-        }
+                            if hack_algorithm.hacked(&thread_cache) {
+                                terminate.store(true, Ordering::Relaxed);
+                                return;
+                            }
+                        }
+                    }
+                });
+                thread_handles.push(handle);
+            }
+            thread_handles.into_iter().for_each(|handle|{ let _ = handle.join(); });
+    
+            let mut thread_cache = thread_cache.lock().unwrap();
+            cache.clear();
+            cache.append(&mut *thread_cache);
 
-        fn hack_from_cache(&self, cache: &Vec<(String, usize)>) -> (T, usize) {
-            cache.iter().try_fold((self.get_initial_state(), 0), |(mut pass, _), (digest, position)| {
-                if self.hacked(&pass) {
-                    return None;
-                }
-                self.hack(&mut pass, digest);
-                Some((pass, position + 1))
-            }).unwrap_or((self.get_initial_state(), 0))
+            return self.hack_algorithm.lock().unwrap().extract(cache)
         }
         
-        pub fn hack_the_door(&self, door_id: &str, cache: &mut Vec<(String, usize)>) -> String {
-            let (mut password, starting_pos) = self.hack_from_cache(cache);
-            if self.hacked(&password) {
-                return self.extract(&password);
-            }
-
-            for i in starting_pos.. {
-                let digest = format!("{:x}", md5::compute(door_id.to_string() + i.to_string().as_ref()));
-                if !digest.starts_with("00000") {
-                    continue;
-                }
-                self.hack(&mut password, &digest);
-                if !cache.iter().any(|(_, pos)| *pos > i) {
-                    cache.push((digest, i));
-                }
-
-                if self.hacked(&password) {
-                    return self.extract(&password)
-                }
-            }
-            unreachable!();
-        }
     }
-
-    pub trait HackAlgorithm<T> {
-        fn get_initial_state(&self) -> T;
-        fn hacked(&self, password: &T) -> bool;
-        fn hack(&self, password: &mut T, digest: &str);
-        fn extract(&self, password: &T) -> String;
+    
+    pub trait HackAlgorithm : Send {
+        fn hacked(&self, cache: &[(String, usize)]) -> bool;
+        fn extract(&self, cache: &[(String, usize)]) -> String;
     }
 
     pub struct HackFirstDoor;
-    impl HackAlgorithm<String> for HackFirstDoor {
-        fn get_initial_state(&self) -> String {
-            String::new()
+    impl HackAlgorithm for HackFirstDoor {
+        fn hacked(&self, cache: &[(String, usize)]) -> bool {
+            cache.len() == 8
         }
 
-        fn hacked(&self, password: &String) -> bool {
-            password.len() == 8
-        }
-
-        fn hack(&self, password: &mut String, digest: &str) {
-            password.push(digest.chars().nth(5).unwrap());
-        }
-
-        fn extract(&self, password: &String) -> String {
-            password.clone()
+        fn extract(&self, cache: &[(String, usize)]) -> String {
+            let mut password = String::new();
+            for i in 0..8 {
+                password.push(cache[i].0.chars().nth(5).unwrap());
+            }
+            password
         }
     }
 
     pub struct HackSecondDoor;
-    impl HackAlgorithm<[Option<char>; 8]> for HackSecondDoor {
-        fn get_initial_state(&self) -> [Option<char>; 8] {
-            [None; 8]
-        }
+    impl HackAlgorithm for HackSecondDoor {
 
-        fn hacked(&self, password: &[Option<char>; 8]) -> bool {
-            password.iter().find(|c| c.is_none()).is_none()
-        }
-
-        fn hack(&self, password: &mut [Option<char>; 8], digest: &str) {
-            if let Ok(i) = digest.chars().nth(5).unwrap().to_string().parse::<usize>() {
-                if i < 8 && password[i].is_none() {
-                    password[i] = Some(digest.chars().nth(6).unwrap()); //unwrap to crash if not found
+        fn hacked(&self, cache: &[(String, usize)]) -> bool {
+            cache.iter().fold(HashSet::new(), |mut counter, (digest, _)|{
+                if let Ok(i) = digest.chars().nth(5).unwrap().to_string().parse::<usize>() {
+                    if i < 8 { counter.insert(i); }
                 }
-            }
+                counter
+            }).len() >= 8
         }
 
-        fn extract(&self, password: &[Option<char>; 8]) -> String {
+        fn extract(&self, cache: &[(String, usize)]) -> String {
+            let password = cache.iter().fold([None; 8], |mut password, (digest, _) | {
+                if let Ok(i) = digest.chars().nth(5).unwrap().to_string().parse::<usize>() {
+                    if i < 8 && password[i].is_none() {
+                        password[i] = Some(digest.chars().nth(6).unwrap()); //unwrap to crash if not found
+                    }
+                }    
+                password
+            });
             password.iter().map(|c| c.unwrap()).collect()
         }
     }
