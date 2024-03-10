@@ -1,15 +1,15 @@
 pub mod door_hacking {
-    use std::{collections::HashSet, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex}, thread};
+    use std::{collections::HashSet, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Mutex}};
 
     use md5;
 
     pub struct HackTheDoor {
-        hack_algorithm: Arc<Mutex<Box<dyn HackAlgorithm>>>
+        hack_algorithm: Mutex<Box<dyn HackAlgorithm>>
     }
 
     impl HackTheDoor {
         pub fn new(hack_algorithm: Box<dyn HackAlgorithm>) -> Self {
-            Self{hack_algorithm: Arc::new(Mutex::new(hack_algorithm))}
+            Self{hack_algorithm: Mutex::new(hack_algorithm)}
         }
 
         pub fn hack_the_door(&self, door_id: &str, cache: &mut Vec<(String, usize)>) -> String {
@@ -18,50 +18,36 @@ pub mod door_hacking {
             if self.hack_algorithm.lock().unwrap().hacked(cache) {
                 return self.hack_algorithm.lock().unwrap().extract(cache);
             }
-    
-            let thread_cache = Arc::new(Mutex::new(cache.clone()));
-            let index = Arc::new(AtomicUsize::new(cache.last().map(|(_, pos)| *pos + 1).unwrap_or(0)));
-            let terminate = Arc::new(AtomicBool::new(false));
-            let mut thread_handles = Vec::new();
-    
-            for _ in 0..THREAD_COUNT {
-                let door_id = door_id.to_string();
-                let thread_cache = Arc::clone(&thread_cache);
-                let index = Arc::clone(&index);
-                let terminate = terminate.clone();
-                let hack_algorithm = self.hack_algorithm.clone();
-                let handle = thread::spawn(move || {
-                    loop {
-                        if terminate.load(Ordering::Relaxed) {
-                            return;
-                        }
 
-                        let i = index.fetch_add(1, Ordering::Relaxed);
-    
-                        let digest = format!("{:x}", md5::compute(door_id.clone() + i.to_string().as_ref()));
-                        if digest.starts_with("00000") {
-                            let mut thread_cache = thread_cache.lock().unwrap();
-                            thread_cache.push((digest, i));
-                            thread_cache.sort_by_key(|(_, pos)|{*pos});
+            let index = AtomicUsize::new(cache.last().map(|(_, pos)| *pos + 1).unwrap_or(0));
+            let terminate = AtomicBool::new(false);
+            let thread_cache: Mutex<&mut Vec<(String, usize)>> = Mutex::new(cache);
 
-                            let hack_algorithm = hack_algorithm.lock().unwrap();
-                            let hack_algorithm = hack_algorithm.as_ref();
-
-                            if hack_algorithm.hacked(&thread_cache) {
-                                terminate.store(true, Ordering::Relaxed);
+            std::thread::scope(|s| {
+                for _ in 0..THREAD_COUNT {
+                    s.spawn(|| {
+                        loop {
+                            if terminate.load(Ordering::Relaxed) {
                                 return;
                             }
-                        }
-                    }
-                });
-                thread_handles.push(handle);
-            }
-            thread_handles.into_iter().for_each(|handle|{ let _ = handle.join(); });
     
-            let mut thread_cache = thread_cache.lock().unwrap();
-            cache.clear();
-            cache.append(&mut *thread_cache);
-
+                            let i = index.fetch_add(1, Ordering::Relaxed);
+        
+                            let digest = format!("{:x}", md5::compute(door_id.to_string() + i.to_string().as_ref()));
+                            if digest.starts_with("00000") {
+                                let mut thread_cache = thread_cache.lock().unwrap();
+                                thread_cache.push((digest, i));
+                                thread_cache.sort_by_key(|(_, pos)|{*pos});
+    
+                                if self.hack_algorithm.lock().unwrap().hacked(&thread_cache) {
+                                    terminate.store(true, Ordering::Relaxed);
+                                    return;
+                                }
+                            }
+                        }
+                    });
+                }
+            });
             return self.hack_algorithm.lock().unwrap().extract(cache)
         }
         
