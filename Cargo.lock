@@ -13,6 +13,7 @@ name = "aoc_2016"
 version = "0.1.0"
 dependencies = [
  "almost",
+ "md5",
  "rayon",
  "text_io",
  "thiserror",
@@ -48,6 +49,12 @@ name = "either"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11157ac094ffbdde99aa67b23417ebdd801842852b500e395a45a9c0aac03e4a"
+
+[[package]]
+name = "md5"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
 
 [[package]]
 name = "proc-macro2"
