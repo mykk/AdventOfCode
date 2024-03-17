@@ -16,23 +16,21 @@ pub mod door_auth {
         let row_regex = Regex::new(r"rotate row y=(\d+) by (\d+)").unwrap();
         let column_regex = Regex::new(r"rotate column x=(\d+) by (\d+)").unwrap();
 
-        let unpack_captures = |caps: &regex::Captures| -> Option<(usize, usize)> { 
+        let get_captures = |caps: Option<regex::Captures>| -> Option<(usize, usize)> {
+            let caps = caps?; 
             Some((caps[1].parse().ok()?, caps[2].parse().ok()?))
         };
 
         lines.iter().map(|line| {            
-            if let Some(caps) = rect_regex.captures(line) {
-                let (a, b) = unpack_captures(&caps)?;
+            if let Some((a, b)) = get_captures(rect_regex.captures(line)) {
                 return Some(Instruction::Rect(a, b));
             }
 
-            if let Some(caps) = row_regex.captures(line) {
-                let (a, b) = unpack_captures(&caps)?;
+            if let Some((a, b)) = get_captures(row_regex.captures(line)) {
                 return Some(Instruction::RotateRow(a, b));
             }
 
-            if let Some(caps) = column_regex.captures(line) {
-                let (a, b) = unpack_captures(&caps)?;
+            if let Some((a, b)) = get_captures(column_regex.captures(line)) {
                 return Some(Instruction::RotateColumn(a, b));
             }
 
@@ -40,51 +38,45 @@ pub mod door_auth {
         }).collect::<Option<Vec<_>>>()
     }
 
-    fn get_initial_lock(wide: usize, tall: usize) -> Vec<Vec<bool>> {
-        let mut the_lock = Vec::new();
-        the_lock.resize_with(tall, ||{
+    fn get_initial_display(wide: usize, tall: usize) -> Vec<Vec<bool>> {
+        let mut display = Vec::new();
+        display.resize_with(tall, ||{
             let mut row = Vec::new();
             row.resize(wide, false);
             row
         });
-        the_lock
+        display
     }
 
     pub(crate) fn rotate_row(row: &[bool], right_shift: usize) -> Vec<bool> {
         let width = row.len();
         let right_shift = right_shift % width;
         (0..width).into_par_iter().map(|i| {
-            let remap_to = if i >= right_shift {
-                i - right_shift
-            }
-            else {
-                width - (right_shift - i)
-            };
-            row[remap_to]
+            row[(i + width - right_shift) % width]
         }).collect()
     }
 
     pub(crate) fn get_display(wide: usize, tall: usize, instructions: &[Instruction]) -> Vec<Vec<bool>> {
-        instructions.iter().fold(get_initial_lock(wide, tall), |mut the_lock, instruction| {
+        instructions.iter().fold(get_initial_display(wide, tall), |mut display, instruction| {
             match instruction {
                 Instruction::Rect(width, height) => {
-                    (0..*height).for_each(|i| { (0..*width).for_each(|j| { the_lock[i][j] = true; }); });
+                    (0..*height).for_each(|i| { (0..*width).for_each(|j| { display[i][j] = true; }); });
                 }
                 Instruction::RotateRow(row, right_shift) => { 
-                    the_lock[*row] = rotate_row(&the_lock[*row], *right_shift);
+                    display[*row] = rotate_row(&display[*row], *right_shift);
                 }
                 Instruction::RotateColumn(column, down_shift) => {
-                    let column_as_row = the_lock.iter().fold(Vec::new(), |mut column_as_row, row| {
+                    let column_as_row = display.iter().fold(Vec::with_capacity(tall), |mut column_as_row, row| {
                         column_as_row.push(row[*column]);
                         column_as_row
                     });
 
                     rotate_row(&column_as_row, *down_shift).iter().enumerate().for_each(|(i, val)| {
-                        the_lock[i][*column] = *val;
+                        display[i][*column] = *val;
                     });
                 }
             }
-            the_lock
+            display
         })        
     }
 
