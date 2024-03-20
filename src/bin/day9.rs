@@ -36,10 +36,9 @@ mod decompose {
 
 fn main() {
     use aoc_2016::utils::aoc_file;
-    let content = aoc_file::open_and_read_file(&mut std::env::args()).unwrap();
-
-    println!("part1: {}", decompose::count_decomposed_version1(&content.chars().filter(|c|!c.is_whitespace()).collect::<String>()));
-    println!("part2: {}", decompose::count_decomposed_version2(&content.chars().filter(|c|!c.is_whitespace()).collect::<String>()));
+    let content = aoc_file::open_and_read_file(&mut std::env::args()).unwrap().chars().filter(|c|!c.is_whitespace()).collect::<String>();
+    println!("part1: {}", decompose::count_decomposed_version1(&content));
+    println!("part2: {}", decompose::count_decomposed_version2(&content));
 }
 
 #[cfg(test)]
