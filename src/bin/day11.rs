@@ -1,3 +1,7 @@
+use std::{clone, collections::HashSet, rc::Rc};
+
+use crate::radioisotope_thermoelectric_generators::ThermoelectricComponent;
+
 mod radioisotope_thermoelectric_generators {
     use std::{cmp::Ordering, collections::HashSet, rc::Rc};
 
@@ -174,9 +178,18 @@ fn main() {
 
     let lines = &content.lines().collect::<Vec<_>>();
     let components = radioisotope_thermoelectric_generators::parse_input(&lines);
-    let moved_in = radioisotope_thermoelectric_generators::find_optimal_move_pattern(&components);
 
-    println!("part1: {}", moved_in);
+    println!("part1: {}", radioisotope_thermoelectric_generators::find_optimal_move_pattern(&components));
+
+    let additional_components = HashSet::from([
+        ThermoelectricComponent::Generator(Rc::new(String::from("elerium"))),
+        ThermoelectricComponent::Microchip(Rc::new(String::from("elerium"))),
+        ThermoelectricComponent::Generator(Rc::new(String::from("dilithium"))),
+        ThermoelectricComponent::Microchip(Rc::new(String::from("dilithium")))]);
+
+    let mut components = components.clone();
+    components[0].extend(additional_components.into_iter());
+    println!("part2: {}", radioisotope_thermoelectric_generators::find_optimal_move_pattern(&components));
 }
 
 #[cfg(test)]
@@ -193,7 +206,6 @@ mod tests {
         let lines = example_str.lines().collect::<Vec<_>>();
         let components = radioisotope_thermoelectric_generators::parse_input(&lines);
 
-        let moved_in = radioisotope_thermoelectric_generators::find_optimal_move_pattern(&components);
-        assert_eq!(moved_in, 11);
+        assert_eq!(radioisotope_thermoelectric_generators::find_optimal_move_pattern(&components), 11);
     }
 }
