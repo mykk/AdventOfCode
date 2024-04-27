@@ -79,10 +79,16 @@ mod radioisotope_thermoelectric_generators {
     }
 
     fn is_used_state(state: &[HashSet<ThermoelectricComponent>], current_floor: usize, count: i32, previous_states: &BinaryHeap<State>) -> bool {
-        previous_states.iter().any(|x| x.floor == current_floor && x.count <= count && x.state == state)
+        previous_states.iter().any(|x| x.floor == current_floor && 
+            x.count <= count && 
+            x.state.iter().enumerate().all(|(i, components)| {
+                components.len() == state[i].len() && 
+                components.iter().filter(|x|matches!(x, ThermoelectricComponent::Generator(_))).count() == 
+                state[i].iter().filter(|x|matches!(x, ThermoelectricComponent::Generator(_))).count()
+            }))
     }
 
-    fn get_new_state_template(current_state: &Vec<HashSet<ThermoelectricComponent>>, current_floor: usize) -> Vec<HashSet<ThermoelectricComponent>> {
+    fn get_new_state_template(current_state: &[HashSet<ThermoelectricComponent>], current_floor: usize) -> Vec<HashSet<ThermoelectricComponent>> {
         current_state.iter().enumerate().fold(Vec::new(), |mut vec, (floor, components)| {
             if floor == current_floor {
                 vec.push(HashSet::new());
@@ -94,7 +100,7 @@ mod radioisotope_thermoelectric_generators {
         })
     }
 
-    fn move_components(current_state: &Vec<HashSet<ThermoelectricComponent>>, current_floor: usize, new_floor: usize) -> Vec<Vec<HashSet<ThermoelectricComponent>>> {
+    fn move_components(current_state: &[HashSet<ThermoelectricComponent>], current_floor: usize, new_floor: usize) -> Vec<Vec<HashSet<ThermoelectricComponent>>> {
         let new_state_template = get_new_state_template(current_state, current_floor);
 
         current_state[current_floor].iter().enumerate().fold(Vec::new(), |mut vec, (index, component)| {
@@ -157,7 +163,7 @@ mod radioisotope_thermoelectric_generators {
         unreachable!();
     }
 
-    pub(crate) fn find_optimal_move_pattern(compoenents: &Vec<HashSet<ThermoelectricComponent>>) -> i32 {
+    pub(crate) fn find_optimal_move_pattern(compoenents: &[HashSet<ThermoelectricComponent>]) -> i32 {
         move_components_bfs(&compoenents)
     }
 }
