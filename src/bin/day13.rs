@@ -60,8 +60,8 @@ mod maze_of_twisty_little_cubicles {
         search_maze(favorite_number, |position|position.x == x && position.y == y, |position, _|position.count)
     }
 
-    pub(crate) fn find_visited_locations(favorite_number: i32) -> usize {
-        search_maze(favorite_number, |position|position.count == 50, |_, visited|visited.len())
+    pub(crate) fn find_visited_locations(favorite_number: i32, limit: usize) -> usize {
+        search_maze(favorite_number, |position|position.count == limit, |_, visited|visited.len())
     }
 
 }
@@ -73,7 +73,7 @@ fn main() {
     let content = aoc_file::open_and_read_file(&mut std::env::args()).unwrap();
     let favorite_number = content.parse::<i32>().unwrap();
     println!("part1: {}", find_shortest_path(31, 39, favorite_number));
-    println!("part2: {}", find_visited_locations(favorite_number));
+    println!("part2: {}", find_visited_locations(favorite_number, 50));
 }
 
 #[cfg(test)]
