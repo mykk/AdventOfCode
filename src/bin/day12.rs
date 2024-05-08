@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 
 mod leonardo_monorail {
-    use core::str;
     use std::collections::HashMap;
 
     use once_cell::sync::Lazy;
@@ -107,6 +106,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use crate::leonardo_monorail::{parse_assembly, execute_assembly};
 
     #[test]
@@ -121,7 +122,7 @@ mod tests {
         let lines = example.lines().collect::<Vec<_>>();
 
         let assembly = parse_assembly(&lines);
-        let registry_results = execute_assembly(&assembly);
+        let registry_results = execute_assembly(&assembly, &HashMap::new());
         assert_eq!(registry_results[&'a'.to_string()], 42);
     }
 }
