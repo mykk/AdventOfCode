@@ -1,5 +1,5 @@
 mod maze_of_twisty_little_cubicles {
-    use std::{cmp::Ordering, collections::{BinaryHeap, HashMap}};
+    use std::{cmp::Ordering, collections::{BinaryHeap, HashSet}};
     use once_cell::sync::Lazy;
 
     #[derive(Debug, PartialEq, Clone, Eq, Hash)]
@@ -24,21 +24,21 @@ mod maze_of_twisty_little_cubicles {
         checksum.count_ones() % 2 == 1
     }
 
-    fn moveable_position(x: i32, y: i32, favorite_number: i32, count: usize, visited: &HashMap<(i32, i32), usize>) -> bool {
-        x >= 0 && y >= 0 && !is_wall(x, y, favorite_number) && (visited.get(&(x, y)).is_none() || visited.get(&(x, y)).is_some_and(|value| *value > count)) 
+    fn moveable_position(x: i32, y: i32, favorite_number: i32, visited: &HashSet<(i32, i32)>) -> bool {
+        x >= 0 && y >= 0 && !is_wall(x, y, favorite_number) && visited.get(&(x, y)).is_none() 
     }
 
     fn search_maze<FinishF, ResultF>(favorite_number: i32, is_finished: FinishF, get_result: ResultF) -> usize 
     where FinishF: Fn(&Position) -> bool, 
-          ResultF: Fn(&Position, &HashMap<(i32, i32), usize>) -> usize
+          ResultF: Fn(&Position, &HashSet<(i32, i32)>) -> usize
     {
         static MOVE_DIRECTIONS: Lazy<Vec<(i32, i32)>> = Lazy::new(||vec![(-1, 0), (1, 0), (0, -1), (0, 1)]);
 
         let mut positions = BinaryHeap::new();
         positions.push(Position{x: 1, y: 1, count: 0});
 
-        let mut visited: HashMap<(i32, i32), usize> = HashMap::new();
-        visited.insert((1, 1), 0);
+        let mut visited = HashSet::new();
+        visited.insert((1, 1));
 
         while let Some(current) = positions.pop() {
             if is_finished(&current) {
@@ -47,10 +47,9 @@ mod maze_of_twisty_little_cubicles {
 
             for move_direction in MOVE_DIRECTIONS.iter() {
                 let new_pos = (current.x + move_direction.0, current.y + move_direction.1); 
-                let current_count = current.count + 1;
-                if moveable_position(new_pos.0, new_pos.1, favorite_number, current_count, &visited) {
-                    positions.push(Position{x: new_pos.0, y: new_pos.1, count: current_count});
-                    visited.insert((new_pos.0, new_pos.1), current_count);
+                if moveable_position(new_pos.0, new_pos.1, favorite_number, &visited) {
+                    positions.push(Position{x: new_pos.0, y: new_pos.1, count: current.count + 1});
+                    visited.insert((new_pos.0, new_pos.1));
                 }    
             }
         }
