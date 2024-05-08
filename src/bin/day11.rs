@@ -1,13 +1,13 @@
-use std::{clone, collections::HashSet, rc::Rc};
+use std::{collections::HashSet, rc::Rc};
 
 use crate::radioisotope_thermoelectric_generators::ThermoelectricComponent;
 
 mod radioisotope_thermoelectric_generators {
-    use std::{cmp::Ordering, collections::HashSet, rc::Rc};
+    use std::{cmp::Ordering, collections::HashSet, rc::Rc, str::FromStr};
 
     use once_cell::sync::Lazy;
     use std::collections::BinaryHeap;
-    use regex::bytes::Regex;
+    use regex::Regex;
 
     #[derive(Debug, PartialEq, Clone, Eq, Hash)]
     pub(crate) enum ThermoelectricComponent {
@@ -52,7 +52,7 @@ mod radioisotope_thermoelectric_generators {
         regex.captures_iter(line.as_ref())
             .filter_map(|cap| cap.get(1))
             .map(|group| {
-                constructor(Rc::new(String::from_utf8(group.as_bytes().iter().map(|x| *x).collect()).unwrap()))
+                constructor(Rc::new(String::from_str(group.as_str()).unwrap()))
             }).collect()
     }
     
