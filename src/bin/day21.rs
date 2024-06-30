@@ -119,8 +119,7 @@ mod scrambled_letters_and_hash {
     }
 
     pub(crate) fn unscramble(seed: &str, scramblings: &[Scrambling]) -> String {
-        let scramblings = scramblings.iter().rev().collect::<Vec<_>>();
-        scramblings.iter().fold(seed.to_string(), |seed, scramble| scramble.unscramble(&seed))
+        scramblings.iter().rev().fold(seed.to_string(), |seed, scramble| scramble.unscramble(&seed))
     }
 }
 
