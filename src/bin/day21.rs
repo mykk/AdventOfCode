@@ -7,6 +7,15 @@ mod scrambled_letters_and_hash {
         Right
     }
 
+    impl Rotate {
+        pub(crate) fn inverse(&self) -> Rotate {
+            match &self {
+                Rotate::Left => Rotate::Right,
+                Rotate::Right => Rotate::Left
+            }
+        }
+    }
+
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub(crate) enum Scrambling {
         SwapPosition(usize, usize),
@@ -15,6 +24,78 @@ mod scrambled_letters_and_hash {
         RotateLetterBased(char),
         Reverse(usize, usize),
         Move(usize, usize)
+    }
+
+    impl Scrambling {
+        fn rotate_letter_based(seed: &str, x: char) -> String {
+            let x = seed.chars().position(|c|{ c == x}).unwrap_or(0);
+            let x = if x >= 4 { x + 2 } else { x + 1 };
+            Self::rotate_sized(seed, Rotate::Right, x)
+        }
+    
+        fn swap_position(seed: &str, x: usize, y: usize) -> String {
+            seed.char_indices().map(|(i, c)| {
+                if i == x { seed.chars().nth(y).unwrap() } 
+                else if i == y { seed.chars().nth(x).unwrap() } 
+                else { c }
+            }).collect()
+        }
+    
+        fn swap_letter(seed: &str, x: char, y: char) -> String {
+            seed.chars().map(|c| {
+                if c == x { y } else if c == y { x } else { c }
+            }).collect()
+        }
+    
+        fn rotate_sized(seed: &str, rotate: Rotate, x: usize) -> String {
+            let x = x % seed.len();
+            match rotate {
+                Rotate::Left => format!("{}{}", &seed[x..], &seed[..x]),
+                Rotate::Right => format!("{}{}", &seed[seed.len()- x..], &seed[..seed.len() - x])
+            }
+        }
+    
+        fn reverse(seed: &str, x: usize, y: usize) -> String {
+            format!("{}{}{}", &seed[..x], &seed[x..=y].chars().rev().collect::<String>(), &seed[y + 1..])
+        }
+    
+        fn move_from_to_position(seed: &str, x: usize, y: usize) -> String {
+            let temp = format!("{}{}", &seed[..x], &seed[x + 1..]);
+            format!("{}{}{}", &temp[..y], seed.chars().nth(x).unwrap(), &temp[y..])
+        }
+
+        fn reverse_rotate_letter_based(seed: &str, x: char) -> String {
+            let mut reversed = seed.to_string();
+    
+            loop {
+                if seed == Self::rotate_letter_based(&reversed, x) {
+                    return reversed;
+                }
+                reversed = Self::rotate_sized(&reversed, Rotate::Left, 1);
+            }
+        }
+    
+        pub(crate) fn scramble(&self, seed: &str) -> String {
+            match self {
+                Scrambling::SwapPosition(x, y) => Self::swap_position(&seed, *x, *y),
+                Scrambling::SwapLetter(x, y) => Self::swap_letter(&seed, *x, *y),
+                Scrambling::Rotate(rotate, x) => Self::rotate_sized(&seed, *rotate, *x),
+                Scrambling::RotateLetterBased(x) => Self::rotate_letter_based(&seed, *x),
+                Scrambling::Reverse(x, y) => Self::reverse(&seed, *x, *y),
+                Scrambling::Move(x, y) => Self::move_from_to_position(&seed, *x, *y)
+            }
+        }
+
+        pub(crate) fn unscramble(&self, seed: &str) -> String {
+            match self {
+                Scrambling::SwapPosition(x, y) => Self::swap_position(&seed, *x, *y),
+                Scrambling::SwapLetter(x, y) => Self::swap_letter(&seed, *x, *y),
+                Scrambling::Rotate(rotate, x) => Self::rotate_sized(&seed, rotate.inverse(), *x),
+                Scrambling::RotateLetterBased(x) => Self::reverse_rotate_letter_based(&seed, *x),
+                Scrambling::Reverse(x, y) => Self::reverse(&seed, *x, *y),
+                Scrambling::Move(x, y) => Self::move_from_to_position(&seed, *y, *x)
+            }
+        }
     }
 
     pub(crate) fn parse(lines: &[&str]) -> Option<Vec<Scrambling>> {
@@ -33,91 +114,14 @@ mod scrambled_letters_and_hash {
         }).collect()
     }
 
-    fn rotate_letter_based(seed: &str, x: char) -> String {
-        let x = seed.chars().position(|c|{ c == x}).unwrap_or(0);
-        let x = if x >= 4 { x + 2 } else { x + 1 };
-        let x = x % seed.chars().count();
-        seed.chars().skip(seed.chars().count() - x).chain(seed.chars().take(seed.chars().count() - x)).collect()
-    }
-
-    fn swap_position(seed: &str, x: usize, y: usize) -> String {
-        seed.chars().enumerate().map(|(i, c)| {
-            if i == x { seed.chars().nth(y).unwrap() } 
-            else if i == y { seed.chars().nth(x).unwrap() } 
-            else { c }
-        }).collect()
-    }
-
-    fn swap_letter(seed: &str, x: char, y: char) -> String {
-        seed.chars().map(|c| {
-            if c == x { y } else if c == y { x } else { c }
-        }).collect()
-    }
-
-    fn rotate_sized(seed: &str, rotate: Rotate, x: usize) -> String {
-        let x = x % seed.chars().count();
-        match rotate {
-            Rotate::Left => seed.chars().skip(x).chain(seed.chars().take(x)).collect(),
-            Rotate::Right => seed.chars().skip(seed.chars().count() - x).chain(seed.chars().take(seed.chars().count() - x)).collect()
-        }
-    }
-
-    fn reverse(seed: &str, x: usize, y: usize) -> String {
-        let chunk = seed.chars().skip(x).take(y - x + 1).collect::<Vec<_>>();
-        let reversed = chunk.into_iter().rev().collect::<Vec<_>>();
-        seed.chars().take(x).chain(reversed.into_iter()).chain(seed.chars().skip(y + 1)).collect()
-    }
-
-    fn move_from_to_position(seed: &str, x: usize, y: usize) -> String {
-        let temp = seed.chars().take(x).chain(seed.chars().skip(x + 1)).collect::<String>();
-        temp.chars().take(y).chain([seed.chars().nth(x).unwrap()]).chain(temp.chars().skip(y)).collect()
-    }
-
     pub(crate) fn scramble(seed: &str, scramblings: &[Scrambling]) -> String {
-        scramblings.iter().fold(seed.to_string(), |seed, scramble| {
-            match &scramble {
-                Scrambling::SwapPosition(x, y) => swap_position(&seed, *x, *y),
-                Scrambling::SwapLetter(x, y) => swap_letter(&seed, *x, *y),
-                Scrambling::Rotate(rotate, x) => rotate_sized(&seed, *rotate, *x),
-                Scrambling::RotateLetterBased(x) => rotate_letter_based(&seed, *x),
-                Scrambling::Reverse(x, y) => reverse(&seed, *x, *y),
-                Scrambling::Move(x, y) => move_from_to_position(&seed, *x, *y)
-            }
-        })
-    }
-
-    fn reverse_rotate_letter_based(seed: &str, x: char) -> String {
-        let mut reversed = seed.to_string();
-
-        loop {
-            if seed == rotate_letter_based(&reversed, x) {
-                return reversed;
-            }
-            reversed = format!("{}{}", reversed.chars().skip(1).collect::<String>(), reversed.chars().nth(0).unwrap());
-        }
-    }
-
-    fn unscramble_reversed(seed: &str, scramblings: &[&Scrambling]) -> String {
-        scramblings.iter().fold(seed.to_string(), |seed, scramble| {
-            match &scramble {
-                Scrambling::SwapPosition(x, y) => swap_position(&seed, *x, *y),
-                Scrambling::SwapLetter(x, y) => swap_letter(&seed, *x, *y),
-                Scrambling::Rotate(rotate, x) =>  {
-                    let rotate = if *rotate == Rotate::Left { Rotate::Right } else { Rotate::Left }
-                    rotate_sized(&seed, rotate, *x)
-                }
-                Scrambling::RotateLetterBased(x) => reverse_rotate_letter_based(&seed, *x),
-                Scrambling::Reverse(x, y) => reverse(&seed, *x, *y),
-                Scrambling::Move(x, y) => move_from_to_position(&seed, *y, *x)
-            }
-        })
+        scramblings.iter().fold(seed.to_string(), |seed, scramble| scramble.scramble(&seed))
     }
 
     pub(crate) fn unscramble(seed: &str, scramblings: &[Scrambling]) -> String {
         let scramblings = scramblings.iter().rev().collect::<Vec<_>>();
-        unscramble_reversed(seed, &scramblings)
+        scramblings.iter().fold(seed.to_string(), |seed, scramble| scramble.unscramble(&seed))
     }
-
 }
 
 fn main() {
