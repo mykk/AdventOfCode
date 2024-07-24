@@ -130,14 +130,7 @@ mod grid_computing {
                     }
                 });
                 used_states.insert((state.goal.x, state.goal.y, neighbour.x, neighbour.y));
-                let unmovable_node = if state.unmovable_node.is_some() {
-                    state.unmovable_node.clone()
-                }
-                else {
-                    None
-                };
-
-                states.push(NodeState{moves : state.moves + 1, goal : state.goal.clone(), state: new_state.collect(), empty_node : neighbour.clone(), unmovable_node});
+                states.push(NodeState{moves : state.moves + 1, state: new_state.collect(), empty_node : neighbour.clone(), .. state.clone()});
             }
         }
     }
