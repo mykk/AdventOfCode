@@ -1,6 +1,6 @@
 mod grid_computing {
     use once_cell::sync::Lazy;
-    use std::{cmp::Ordering, collections::{BinaryHeap, HashMap}};
+    use std::{cmp::Ordering, collections::{BinaryHeap, HashSet}};
     use regex;
 
     #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -37,7 +37,8 @@ mod grid_computing {
         moves: i32,
         state: Vec<Node>,
         empty_node: Node,
-        goal: Node
+        goal: Node,
+        unmovable_node: Option<Node>
     }
 
     impl PartialOrd for NodeState {
@@ -54,17 +55,17 @@ mod grid_computing {
         }
     }
 
-    fn init_states(states: &mut BinaryHeap<NodeState>, nodes: &[Node], moves: i32, goal: &Node) {
+    fn init_states(states: &mut BinaryHeap<NodeState>, nodes: &[Node], goal: &Node) {
         nodes.iter().for_each(|node| {
             if node.used == 0 {
-                states.push(NodeState{moves, goal: goal.clone(), state: nodes.to_vec(), empty_node : node.clone()});
+                states.push(NodeState{moves: 0, goal: goal.clone(), state: nodes.to_vec(), empty_node: node.clone(), unmovable_node : None});
             }
         })
     }
 
     const NEIGHBOURS_OFFSET: [(i32, i32); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
 
-    fn append_initial_states(nodes: &[Node], states: &mut BinaryHeap<NodeState>, moves: i32, goal: &Node) {
+    fn append_initial_states(nodes: &[Node], states: &mut BinaryHeap<NodeState>, goal: &Node) {
         for node in nodes{
             if node.used == 0 {
                 continue;
@@ -94,26 +95,32 @@ mod grid_computing {
                             new_node.clone()
                         }
                     });
-                    states.push(NodeState{moves: moves + 1, goal : goal.clone(), state: new_state.collect(), empty_node : new_empty});
+                    states.push(NodeState{moves : 1, goal : goal.clone(), state : new_state.collect(), empty_node : new_empty, unmovable_node : None});
                 }
             }
         }
     }
 
-    fn append_states_from_empty_node(nodes: &[Node], states: &mut BinaryHeap<NodeState>, used_states: &mut Vec<(i32, i32, i32, i32)>, moves: i32, goal: &Node, empty_node: &Node) {
+    fn append_states_from_empty_node(nodes: &[Node], states: &mut BinaryHeap<NodeState>, used_states: &mut HashSet<(i32, i32, i32, i32)>, state: &NodeState) {
         for offset in NEIGHBOURS_OFFSET {
-            if let Some(neighbour) = nodes.iter().find(|neighbour| neighbour.used <= empty_node.size && empty_node.x + offset.0 == neighbour.x && empty_node.y + offset.1 == neighbour.y) {
-                if used_states.iter().any(|used_state| *used_state == (goal.x, goal.y, neighbour.x, neighbour.y)) {
+            if let Some(neighbour) = nodes.iter().find(|neighbour| neighbour.used <= state.empty_node.size && state.empty_node.x + offset.0 == neighbour.x && state.empty_node.y + offset.1 == neighbour.y) {
+                if used_states.contains(&(state.goal.x, state.goal.y, neighbour.x, neighbour.y)) {
                     continue;
                 }
 
-                if neighbour.x == goal.x && neighbour.y == goal.y {
-                    continue;;
+                if neighbour.x == state.goal.x && neighbour.y == state.goal.y {
+                    continue;
+                }
+
+                if let Some(unmovable_node) = &state.unmovable_node {
+                    if (unmovable_node.x, unmovable_node.y) == (neighbour.x, neighbour.y) {
+                        continue;
+                    }
                 }
 
                 let new_state = nodes.iter().map(|new_node| {
-                    if new_node.x == empty_node.x && new_node.y == empty_node.y {
-                        Node{used : neighbour.used,.. *empty_node}
+                    if new_node.x == state.empty_node.x && new_node.y == state.empty_node.y {
+                        Node{used : neighbour.used,.. state.empty_node}
                     }
                     else if new_node.x == neighbour.x && new_node.y == neighbour.y {
                         Node{used : 0,.. *neighbour}
@@ -122,8 +129,15 @@ mod grid_computing {
                         new_node.clone()
                     }
                 });
-                used_states.push((goal.x, goal.y, neighbour.x, neighbour.y));
-                states.push(NodeState{moves: moves + 1, goal : goal.clone(), state: new_state.collect(), empty_node : neighbour.clone()});
+                used_states.insert((state.goal.x, state.goal.y, neighbour.x, neighbour.y));
+                let unmovable_node = if state.unmovable_node.is_some() {
+                    state.unmovable_node.clone()
+                }
+                else {
+                    None
+                };
+
+                states.push(NodeState{moves : state.moves + 1, goal : state.goal.clone(), state: new_state.collect(), empty_node : neighbour.clone(), unmovable_node});
             }
         }
     }
@@ -134,11 +148,7 @@ mod grid_computing {
         })
     }
 
-    fn create_new_goal_state(state: NodeState, states: &mut BinaryHeap<NodeState>, used_states: &mut Vec<(i32, i32, i32, i32)>) {
-        if used_states.iter().any(|used_state| *used_state == (state.empty_node.x, state.empty_node.y, state.goal.x, state.goal.y)) {
-            return;
-        }
-
+    fn create_new_goal_state(state: NodeState) -> NodeState {
         let new_goal = Node{used : state.goal.used,.. state.empty_node};
         let new_empty = Node{used : 0,.. state.goal};
         let new_state = state.state.into_iter().map(|new_node| {
@@ -152,40 +162,62 @@ mod grid_computing {
                 new_node
             }
         });
+        NodeState{moves: state.moves + 1, state: new_state.collect(), goal : new_goal, empty_node : new_empty, unmovable_node: None}
+    }
 
-        used_states.push((new_goal.x, new_goal.y, new_empty.x, new_empty.y));
-        states.push(NodeState{moves: state.moves + 1, state: new_state.collect(), goal : new_goal, empty_node : new_empty});    
+    fn append_new_goal_state(state: NodeState, states: &mut BinaryHeap<NodeState>, used_states: &mut HashSet<(i32, i32, i32, i32)>) {
+        assert!(state.unmovable_node.is_none());
+
+        if used_states.contains(&(state.empty_node.x, state.empty_node.y, state.goal.x, state.goal.y)) {
+            return;
+        }
+
+        let state = create_new_goal_state(state);
+        used_states.insert((state.goal.x, state.goal.y, state.empty_node.x, state.empty_node.y));
+        states.push(state);    
+    }
+
+    fn create_access_node_goal_state(nodes: &[Node], state: NodeState) -> NodeState {
+        let mut new_state = create_new_goal_state(state);
+        new_state.unmovable_node = Some(new_state.goal);
+        new_state.goal = Node{ ..*nodes.iter().find(|node|node.x == 0 && node.y == 0).unwrap() };
+        new_state
     }
 
     pub(crate) fn get_node(nodes: &[Node], initial_goal: &Node) -> i32 {
         let mut states = BinaryHeap::new();
-        init_states(&mut states, nodes, 0, initial_goal);
-        append_initial_states(nodes, &mut states, 0, initial_goal);
+        init_states(&mut states, nodes, initial_goal);
+        append_initial_states(nodes, &mut states, initial_goal);
 
-        let mut used_states = states.iter().map(|state| (state.goal.x, state.goal.y, state.empty_node.x, state.empty_node.y)).collect::<Vec<_>>();
+        let mut used_states = states.iter().map(|state| (state.goal.x, state.goal.y, state.empty_node.x, state.empty_node.y)).collect::<HashSet<_>>();
 
         while let Some(state) = states.pop() {
             if reached_goal(&state) {
-                if (state.empty_node.x == 1 && state.empty_node.y == 0) || (state.empty_node.x == 1 && state.empty_node.y == 0) {
-                    return state.moves + 1 + 5; //temp 
+                if (state.empty_node.x == 1 && state.empty_node.y == 0) || (state.empty_node.x == 0 && state.empty_node.y == 1) {
+                    if (state.goal.x, state.goal.y) == (0, 0) {
+                        return state.moves + 2;
+                    }
+                    else {
+                        let access_point_state = create_access_node_goal_state(nodes, state);
+                        used_states.insert((access_point_state.goal.x, access_point_state.goal.y, access_point_state.empty_node.x, access_point_state.empty_node.y));
+                        states.push(access_point_state);
+                    }
                 }
                 else {
-                    append_states_from_empty_node(nodes, &mut states, &mut used_states, state.moves, &state.goal, nodes.iter().find(|node|node.x == state.empty_node.x && node.y == state.empty_node.y).unwrap());
-                    create_new_goal_state(state, &mut states, &mut used_states);
+                    append_states_from_empty_node(nodes, &mut states, &mut used_states, &state);
+                    append_new_goal_state(state, &mut states, &mut used_states);
                 }
             }
             else {
-                append_states_from_empty_node(nodes, &mut states, &mut used_states, state.moves, &state.goal, nodes.iter().find(|node|node.x == state.empty_node.x && node.y == state.empty_node.y).unwrap());
+                append_states_from_empty_node(nodes, &mut states, &mut used_states, &state);
             }
         }
-        unreachable!()
+        unreachable!("grid is in an invalid state for this algorithm")
     }
 
     pub(crate) fn get_top_right(nodes: &[Node]) -> i32 {
-        let max_x = nodes.iter().max_by_key(|node|node.x).unwrap().x;
-        get_node(nodes, nodes.iter().find(|node| node.x == max_x && node.y == 0).unwrap())
+        get_node(nodes, nodes.iter().max_by_key(|node|(node.x, -node.y)).unwrap())
     }
-
 }
 
 fn main() {
@@ -221,7 +253,7 @@ mod tests {
             let nodes = parse(&lines).unwrap();
 
             assert_eq!(7, get_top_right(&nodes));
-    }
+        }
 
     #[test]
     fn test_example_no_initial_state() {
@@ -242,7 +274,7 @@ mod tests {
             let nodes = parse(&lines).unwrap();
 
             assert_eq!(7, get_top_right(&nodes));
-    }
+        }
 
     #[test]
     fn test_example_empty_node_low() {
@@ -263,7 +295,7 @@ mod tests {
             let nodes = parse(&lines).unwrap();
 
             assert_eq!(8, get_top_right(&nodes));
-    }
+        }
 
     #[test]
     fn test_example_extended() {
@@ -288,5 +320,30 @@ mod tests {
             let nodes = parse(&lines).unwrap();
 
             assert_eq!(14, get_top_right(&nodes));
-    }
+        }
+
+        #[test]
+        fn test_example_extended_with_goal_blocker() {
+            use crate::grid_computing::{parse, get_top_right};
+    
+            let lines = ["root@ebhq-gridcenter# df -h",
+                "Filesystem            Size  Used  Avail  Use%",
+                "/dev/grid/node-x0-y0   10T    8T     2T   80%",
+                "/dev/grid/node-x0-y1   11T    6T     5T   54%",
+                "/dev/grid/node-x0-y2    8T    6T     4T   87%",
+                "/dev/grid/node-x1-y0    9T    7T     2T   77%",
+                "/dev/grid/node-x1-y1   99T   99T     8T  100%",
+                "/dev/grid/node-x1-y2   11T    6T     4T   63%",
+                "/dev/grid/node-x2-y0   10T    6T     4T   60%",
+                "/dev/grid/node-x2-y1    9T    8T     1T   88%",
+                "/dev/grid/node-x2-y2    9T    6T     3T   66%",
+                "/dev/grid/node-x3-y0   10T    6T     4T   60%",
+                "/dev/grid/node-x3-y1    9T    8T     1T   88%",
+                "/dev/grid/node-x3-y2    9T    0T     9T   0%"
+                ];
+    
+                let nodes = parse(&lines).unwrap();
+    
+                assert_eq!(20, get_top_right(&nodes));
+            }
 }
