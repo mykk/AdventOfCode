@@ -82,13 +82,13 @@ mod grid_computing {
                         continue;
                     }
 
-                    let new_empty = Node{x : node.x, y : node.y, size : node.size, used : 0};
+                    let new_empty = Node{used : 0,.. *node};
                     let new_state = nodes.iter().map(|new_node| {
                         if new_node.x == node.x && new_node.y == node.y {
                             new_empty.clone()
                         }
                         else if new_node.x == neighbour.x && new_node.y == neighbour.y {
-                            Node{x : neighbour.x, y : neighbour.y, size : neighbour.size, used : neighbour.used + node.used}
+                            Node{used : neighbour.used + node.used,.. *neighbour}
                         }
                         else {
                             new_node.clone()
@@ -100,37 +100,61 @@ mod grid_computing {
         }
     }
 
-    fn append_states_from_empty_node(nodes: &[Node], states: &mut BinaryHeap<NodeState>, moves: i32, goal: &Node, empty_node: &Node) {
+    fn append_states_from_empty_node(nodes: &[Node], states: &mut BinaryHeap<NodeState>, used_states: &mut Vec<(i32, i32, i32, i32)>, moves: i32, goal: &Node, empty_node: &Node) {
         for offset in NEIGHBOURS_OFFSET {
             if let Some(neighbour) = nodes.iter().find(|neighbour| neighbour.used <= empty_node.size && empty_node.x + offset.0 == neighbour.x && empty_node.y + offset.1 == neighbour.y) {
+                if used_states.iter().any(|used_state| *used_state == (goal.x, goal.y, neighbour.x, neighbour.y)) {
+                    continue;
+                }
+
                 if neighbour.x == goal.x && neighbour.y == goal.y {
-                    panic!("reached goal! handle this case elsewhere");
+                    continue;;
                 }
 
                 let new_state = nodes.iter().map(|new_node| {
                     if new_node.x == empty_node.x && new_node.y == empty_node.y {
-                        Node{x : empty_node.x, y : empty_node.y, size : empty_node.size, used : neighbour.used}
+                        Node{used : neighbour.used,.. *empty_node}
                     }
                     else if new_node.x == neighbour.x && new_node.y == neighbour.y {
-                        Node{x : neighbour.x, y : neighbour.y, size : neighbour.size, used : 0}
+                        Node{used : 0,.. *neighbour}
                     }
                     else {
                         new_node.clone()
                     }
                 });
+                used_states.push((goal.x, goal.y, neighbour.x, neighbour.y));
                 states.push(NodeState{moves: moves + 1, goal : goal.clone(), state: new_state.collect(), empty_node : neighbour.clone()});
             }
         }
     }
 
-    fn reached_goal(state: &NodeState) -> Option<(i32, i32)> {
-        for offset in NEIGHBOURS_OFFSET {
-            if state.empty_node.x + offset.0 == state.goal.x && state.empty_node.y + offset.1 == state.goal.y {
-                return Some(offset)
-            } 
+    fn reached_goal(state: &NodeState) -> bool {
+        NEIGHBOURS_OFFSET.iter().any(|offset| {
+            state.empty_node.x + offset.0 == state.goal.x && state.empty_node.y + offset.1 == state.goal.y
+        })
+    }
+
+    fn create_new_goal_state(state: NodeState, states: &mut BinaryHeap<NodeState>, used_states: &mut Vec<(i32, i32, i32, i32)>) {
+        if used_states.iter().any(|used_state| *used_state == (state.empty_node.x, state.empty_node.y, state.goal.x, state.goal.y)) {
+            return;
         }
 
-        None
+        let new_goal = Node{used : state.goal.used,.. state.empty_node};
+        let new_empty = Node{used : 0,.. state.goal};
+        let new_state = state.state.into_iter().map(|new_node| {
+            if new_node.x == state.empty_node.x && new_node.y == state.empty_node.y {
+                new_goal.clone()
+            }
+            else if new_node.x == state.goal.x && new_node.y == state.goal.y {
+                new_empty.clone()
+            }
+            else {
+                new_node
+            }
+        });
+
+        used_states.push((new_goal.x, new_goal.y, new_empty.x, new_empty.y));
+        states.push(NodeState{moves: state.moves + 1, state: new_state.collect(), goal : new_goal, empty_node : new_empty});    
     }
 
     pub(crate) fn get_node(nodes: &[Node], initial_goal: &Node) -> i32 {
@@ -138,34 +162,20 @@ mod grid_computing {
         init_states(&mut states, nodes, 0, initial_goal);
         append_initial_states(nodes, &mut states, 0, initial_goal);
 
+        let mut used_states = states.iter().map(|state| (state.goal.x, state.goal.y, state.empty_node.x, state.empty_node.y)).collect::<Vec<_>>();
+
         while let Some(state) = states.pop() {
-            if let Some(goal_offset) = reached_goal(&state) {
-                if state.empty_node.x == 1 && state.empty_node.y == 0 {
+            if reached_goal(&state) {
+                if (state.empty_node.x == 1 && state.empty_node.y == 0) || (state.empty_node.x == 1 && state.empty_node.y == 0) {
                     return state.moves + 1 + 5; //temp 
                 }
-
-                if state.empty_node.x == 1 && state.empty_node.y == 0 {
-                    return state.moves + 1 + 5; //temp
+                else {
+                    append_states_from_empty_node(nodes, &mut states, &mut used_states, state.moves, &state.goal, nodes.iter().find(|node|node.x == state.empty_node.x && node.y == state.empty_node.y).unwrap());
+                    create_new_goal_state(state, &mut states, &mut used_states);
                 }
-
-                let new_goal = Node{x : state.empty_node.x, y : state.empty_node.y, size : state.empty_node.size, used : state.goal.used };
-                let new_empty = Node{x : state.goal.x, y : state.goal.y, size : state.goal.size, used : 0};
-                let new_state = state.state.into_iter().map(|new_node| {
-                    if new_node.x == state.empty_node.x && new_node.y == state.empty_node.y {
-                        new_goal.clone()
-                    }
-                    else if new_node.x == state.goal.x && new_node.y == state.goal.y {
-                        new_empty.clone()
-                    }
-                    else {
-                        new_node
-                    }
-                });
-
-                states.push(NodeState{moves: state.moves + 1, state: new_state.collect(), goal : new_goal, empty_node : new_empty});
             }
             else {
-                append_states_from_empty_node(nodes, &mut states, state.moves, &state.goal, nodes.iter().find(|node|node.x == state.empty_node.x && node.y == state.empty_node.y).unwrap());
+                append_states_from_empty_node(nodes, &mut states, &mut used_states, state.moves, &state.goal, nodes.iter().find(|node|node.x == state.empty_node.x && node.y == state.empty_node.y).unwrap());
             }
         }
         unreachable!()
@@ -253,5 +263,30 @@ mod tests {
             let nodes = parse(&lines).unwrap();
 
             assert_eq!(8, get_top_right(&nodes));
+    }
+
+    #[test]
+    fn test_example_extended() {
+        use crate::grid_computing::{parse, get_top_right};
+
+        let lines = ["root@ebhq-gridcenter# df -h",
+            "Filesystem            Size  Used  Avail  Use%",
+            "/dev/grid/node-x0-y0   10T    8T     2T   80%",
+            "/dev/grid/node-x0-y1   11T    6T     5T   54%",
+            "/dev/grid/node-x0-y2   32T   28T     4T   87%",
+            "/dev/grid/node-x1-y0    9T    7T     2T   77%",
+            "/dev/grid/node-x1-y1    8T    6T     8T    0%",
+            "/dev/grid/node-x1-y2   11T    0T     4T   63%",
+            "/dev/grid/node-x2-y0   10T    6T     4T   60%",
+            "/dev/grid/node-x2-y1    9T    8T     1T   88%",
+            "/dev/grid/node-x2-y2    9T    6T     3T   66%",
+            "/dev/grid/node-x3-y0   10T    6T     4T   60%",
+            "/dev/grid/node-x3-y1    9T    8T     1T   88%",
+            "/dev/grid/node-x3-y2    9T    6T     3T   66%"
+            ];
+
+            let nodes = parse(&lines).unwrap();
+
+            assert_eq!(14, get_top_right(&nodes));
     }
 }
