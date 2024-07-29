@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-mod leonardo_monorail {
+mod safe_cracking {
     use std::collections::HashMap;
 
     use once_cell::sync::Lazy;
@@ -60,63 +58,51 @@ mod leonardo_monorail {
         }
     }
 
-    fn get_optimized_instructions(instructions: &[&Instructions]) -> (Vec<Instructions>, usize) {
+    fn get_optimized_instructions(instructions: &[&Instructions]) -> Option<Vec<Instructions>> {
         if instructions.len() < 8 {
-            return ([(*instructions.iter().next().unwrap()).clone()].into(), 1);
+            return None;
         }
 
         let iter = instructions.iter();
         let init_vals = iter.clone().take(3).map(|instruction| match instruction {
             Instructions::Cpy(val, reg) => Some((val, reg)),
             _ => None
-        }).collect::<Option<Vec<_>>>();
+        }).collect::<Option<Vec<_>>>()?;
 
-        if init_vals.is_none() {
-            return ([(*instructions.iter().next().unwrap()).clone()].into(), 1);
-        }
+        let init_zero_reg = init_vals.iter().find(|(init_val, _)|*init_val == "0")?.1;
 
-        let init_vals = init_vals.unwrap();
-        if init_vals.iter().filter(|init_val| *init_val.0 == '0'.to_string()).count() != 1 {
-            return ([(*instructions.iter().next().unwrap()).clone()].into(), 1);
-        }
-        let init_zero_reg = init_vals.iter().find(|init_val|*init_val.0 == '0'.to_string()).unwrap().1;
-
-        let mut multipliers = init_vals.iter().filter(|init_val|*init_val.0 != '0'.to_string());
-        let multiplier1 = multipliers.next().unwrap().1;
-        let multiplier2 = multipliers.next().unwrap().1;
+        let mut multipliers = init_vals.iter().filter(|(init_val, _)|*init_val != "0");
+        let multiplier1 = multipliers.next()?.1;
+        let multiplier2 = multipliers.next()?.1;
         if *multiplier1 == *multiplier2 {
-            return ([(*instructions.iter().next().unwrap()).clone()].into(), 1);
+            return None;
         }
 
-        if iter.clone().skip(3).take(2).find(|instruction| ***instruction == Instructions::Inc(init_zero_reg.clone())).is_none() {
-            return ([(*instructions.iter().next().unwrap()).clone()].into(), 1);
+        if iter.clone().skip(3).take(2).all(|instruction| matches!(instruction, Instructions::Inc(reg) if init_zero_reg != reg)) {
+            return None;
         }
 
-        let multiplier = iter.clone().skip(3).take(2).find(|instruction| ***instruction == Instructions::Dec(multiplier1.clone()) || ***instruction == Instructions::Dec(multiplier2.clone()));
-        if multiplier.is_none() {
-            return ([(*instructions.iter().next().unwrap()).clone()].into(), 1);
-        }
-        let (multiplier1, multiplier2) = if **multiplier.unwrap() == Instructions::Dec(multiplier1.clone()) {(multiplier1, multiplier2)} else { (multiplier2, multiplier1) };
+        let current_multiplier = iter.clone().skip(3).take(2).find(|instruction| matches!(instruction, Instructions::Dec(multiplier) if multiplier == multiplier1 || multiplier == multiplier2))?;
+        let (multiplier1, multiplier2) = if matches!(current_multiplier, Instructions::Dec(multiplier) if multiplier == multiplier1) {(multiplier1, multiplier2)} else { (multiplier2, multiplier1) };
 
         let mut iter = iter.skip(5);
-        if **iter.next().unwrap() != Instructions::Jnz(multiplier1.clone(), "-2".to_string()) {
-            return ([(*instructions.iter().next().unwrap()).clone()].into(), 1);
+        if matches!(iter.next()?, Instructions::Jnz(reg, value) if reg != multiplier1 || value != "-2") {
+            return None;
         }
 
-        if **iter.next().unwrap() != Instructions::Dec(multiplier2.clone()) {
-            return ([(*instructions.iter().next().unwrap()).clone()].into(), 1);
+        if matches!(iter.next()?, Instructions::Dec(reg) if reg != multiplier2) {
+            return None;
         }
 
-        if **iter.next().unwrap() != Instructions::Jnz(multiplier2.clone(), "-5".to_string()) {
-            return ([(*instructions.iter().next().unwrap()).clone()].into(), 1);
+        if matches!(iter.next()?, Instructions::Jnz(reg, value) if reg != multiplier2 || value != "-5") {
+            return None;
         }
 
         let cpy_instructions = 
             instructions.iter().take(3).map(|x|(**x).clone()).
             chain([Instructions::Mul(multiplier1.clone(), multiplier2.clone(), init_zero_reg.clone())]).
             chain([Instructions::Pass(), Instructions::Pass(), Instructions::Pass(), Instructions::Pass()]);
-        return (cpy_instructions.collect(), 8);
-
+        Some(cpy_instructions.collect())
     }
 
     fn optimize_assembly(assembly: &[Instructions]) -> Vec<Instructions> {
@@ -124,9 +110,14 @@ mod leonardo_monorail {
 
         let mut optimized_assembly = vec![];
         while index < assembly.len() {
-            let (instructions, offset) = get_optimized_instructions(&assembly.iter().skip(index).collect::<Vec<_>>());
-            index += offset;
-            optimized_assembly.extend(instructions.into_iter());
+            if let Some(instructions) = get_optimized_instructions(&assembly.iter().skip(index).collect::<Vec<_>>()) {
+                index += instructions.len();
+                optimized_assembly.extend(instructions.into_iter());    
+            }
+            else {
+                optimized_assembly.push(assembly[index].clone());
+                index += 1;
+            }
         }
 
         optimized_assembly 
@@ -190,7 +181,7 @@ mod leonardo_monorail {
 
 fn main() {
     use aoc_2016::utils::aoc_file;
-    use crate::leonardo_monorail::{parse_assembly, execute_assembly};
+    use crate::safe_cracking::{parse_assembly, execute_assembly};
 
     let content = aoc_file::open_and_read_file(&mut std::env::args()).unwrap();
 
@@ -208,7 +199,7 @@ fn main() {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::leonardo_monorail::{parse_assembly, execute_assembly};
+    use crate::safe_cracking::{parse_assembly, execute_assembly};
 
     #[test]
     fn test_example() {
