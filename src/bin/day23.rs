@@ -59,10 +59,6 @@ mod safe_cracking {
     }
 
     fn get_optimized_instructions(instructions: &[&Instructions]) -> Option<Vec<Instructions>> {
-        if instructions.len() < 8 {
-            return None;
-        }
-
         let iter = instructions.iter();
         let init_vals = iter.clone().take(3).map(|instruction| match instruction {
             Instructions::Cpy(val, reg) => Some((val, reg)),
@@ -85,18 +81,11 @@ mod safe_cracking {
         let current_multiplier = iter.clone().skip(3).take(2).find(|instruction| matches!(instruction, Instructions::Dec(multiplier) if multiplier == multiplier1 || multiplier == multiplier2))?;
         let (multiplier1, multiplier2) = if matches!(current_multiplier, Instructions::Dec(multiplier) if multiplier == multiplier1) {(multiplier1, multiplier2)} else { (multiplier2, multiplier1) };
 
+        
         let mut iter = iter.skip(5);
-        if matches!(iter.next()?, Instructions::Jnz(reg, value) if reg != multiplier1 || value != "-2") {
-            return None;
-        }
-
-        if matches!(iter.next()?, Instructions::Dec(reg) if reg != multiplier2) {
-            return None;
-        }
-
-        if matches!(iter.next()?, Instructions::Jnz(reg, value) if reg != multiplier2 || value != "-5") {
-            return None;
-        }
+        if matches!(iter.next()?, Instructions::Jnz(reg, value) if reg != multiplier1 || value != "-2") { return None; }
+        if matches!(iter.next()?, Instructions::Dec(reg) if reg != multiplier2) { return None; }
+        if matches!(iter.next()?, Instructions::Jnz(reg, value) if reg != multiplier2 || value != "-5") { return None; }
 
         let cpy_instructions = 
             instructions.iter().take(3).map(|x|(**x).clone()).
@@ -161,7 +150,7 @@ mod safe_cracking {
                             Instructions::Tgl(val) => Instructions::Inc(val.clone()),
                             Instructions::Jnz(val1, val2) => Instructions::Cpy(val1.clone(), val2.clone()),
                             Instructions::Cpy(val1, val2) => Instructions::Jnz(val1.clone(), val2.clone()),
-                            _ => panic!("optimized instruction that should have tgl")
+                            _ => panic!("optimized instruction toggled")
                         }
                     }
                     index + 1
