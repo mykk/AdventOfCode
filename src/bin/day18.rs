@@ -62,8 +62,6 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use crate::like_a_rogue::count_tiles;
-
     #[test]
     fn test_example() {
         use crate::like_a_rogue::count_tiles;
