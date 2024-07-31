@@ -52,11 +52,11 @@ mod air_duct_spelunking {
         }).collect()
     }
     
-    fn on_final_node(node: char, graph: &HashMap::<char, HashMap::<char, u32>>, visited: HashSet<char>, distance: u32, return_to_zero: bool) -> u32 {
+    fn on_final_node(node: char, graph: &HashMap::<char, HashMap::<char, u32>>, distance: u32, return_to_zero: bool) -> u32 {
         if !return_to_zero {
             distance
         } else {
-            find_shortest_route_inner(node, graph, visited.iter().filter(|c| **c != '0').map(|c|*c).collect(), distance, false)
+            distance + graph[&node][&'0']
         }
     }
 
@@ -67,7 +67,7 @@ mod air_duct_spelunking {
             }
 
             Some(find_shortest_route_inner(*current_node, graph, visited.iter().chain([current_node]).map(|c|*c).collect(), current_distance + distance, return_to_zero))
-        }).min().unwrap_or_else(||on_final_node(node, graph, visited, distance, return_to_zero))
+        }).min().unwrap_or_else(||on_final_node(node, graph, distance, return_to_zero))
     }
 
     pub(crate) fn find_shortest_route(starting_node: char, graph: &HashMap::<char, HashMap::<char, u32>>, return_to_zero: bool) -> u32 {
