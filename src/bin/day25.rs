@@ -14,7 +14,7 @@ mod safe_cracking {
 
                 previous_output = output_val;
 
-                if seen_states.iter().any(|seen_state: &HashMap<String, i32>| { seen_state["a"] == values["a"] && seen_state["b"] == values["b"] && seen_state["c"] == values["c"] && seen_state["d"] == values["d"] }) {
+                if seen_states.iter().any(|seen_state: &HashMap<String, i32>| seen_state.iter().all(|(key, val)| values[key] == *val) ) {
                     found_signal = true;
                     true
                 }

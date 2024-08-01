@@ -7,11 +7,11 @@ fn main() {
     let lines = content.lines().collect::<Vec<_>>();
     let assembly = assembunny::parse_assembly(&lines);
 
-    let values = assembunny::execute_assembly(&assembly, [('a'.to_string(), 7)].into(), |_, _|panic!());
-    println!("part1: {}", values[&'a'.to_string()]);
+    let values = assembunny::execute_assembly(&assembly, [("a".to_string(), 7)].into(), |_, _|panic!());
+    println!("part1: {}", values["a"]);
 
-    let values = assembunny::execute_assembly(&assembly, [('a'.to_string(), 12)].into(), |_, _|panic!());
-    println!("part2: {}", values[&'a'.to_string()]);
+    let values = assembunny::execute_assembly(&assembly, [("a".to_string(), 12)].into(), |_, _|panic!());
+    println!("part2: {}", values["a"]);
 }
 
 #[cfg(test)]
@@ -33,6 +33,6 @@ mod tests {
 
         let assembly = assembunny::parse_assembly(&lines);
         let values = assembunny::execute_assembly(&assembly, HashMap::new(), |_,_|panic!());
-        assert_eq!(values[&'a'.to_string()], 3);
+        assert_eq!(values["a"], 3);
     }
 }

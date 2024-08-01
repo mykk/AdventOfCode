@@ -143,7 +143,9 @@ where OutputF: FnMut(&HashMap<String, i32>, i32) -> bool
     while index < assembly.len() {
         index = match &assembly[index] {
             Instructions::Cpy(value, registry) => {
-                values.insert(registry.clone(), get_value(&values, value));
+                if registry.parse::<i32>().is_err() {
+                    values.insert(registry.clone(), get_value(&values, value));
+                }
                 index + 1    
             }
             Instructions::Inc(registry) => {
