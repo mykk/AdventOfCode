@@ -16,12 +16,12 @@ mod safe_cracking {
 
                 if seen_states.iter().any(|seen_state: &HashMap<String, i32>| seen_state.iter().all(|(key, val)| values[key] == *val) ) {
                     found_signal = true;
-                    true
                 }
                 else {
                     seen_states.push(values.clone());
-                    false    
                 }
+
+                found_signal
             });
 
             found_signal
