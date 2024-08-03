@@ -7,14 +7,14 @@ mod safe_cracking {
             let mut previous_output = 1;
             let mut seen_states = Vec::new();
             let mut found_signal = false;
-            assembunny::execute_assembly(assembly, [("a".to_string(), *a)].into(), |values, output_val|{
+            assembunny::execute_assembly(assembly, [('a', *a)].into(), |values, output_val|{
                 if (output_val != 0 && output_val != 1) || (output_val == previous_output) {
                     return true;
                 }
 
                 previous_output = output_val;
 
-                if seen_states.iter().any(|seen_state: &HashMap<String, i32>| seen_state.iter().all(|(key, val)| values[key] == *val) ) {
+                if seen_states.iter().any(|seen_state: &HashMap<char, i32>| seen_state.iter().all(|(key, val)| values[key] == *val) ) {
                     found_signal = true;
                 }
                 else {
