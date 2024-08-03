@@ -8,10 +8,10 @@ fn main() {
     let assembly = assembunny::parse_assembly(&lines);
 
     let registry_results = assembunny::execute_assembly(&assembly, [].into(), |_, _|panic!());
-    println!("part1: {}", registry_results["a"]);
+    println!("part1: {}", registry_results[&'a']);
 
-    let registry_results = assembunny::execute_assembly(&assembly, [('c'.to_string(), 1)].into(), |_, _|panic!());
-    println!("part2: {}", registry_results["a"]);
+    let registry_results = assembunny::execute_assembly(&assembly, [('c', 1)].into(), |_, _|panic!());
+    println!("part2: {}", registry_results[&'a']);
 }
 
 #[cfg(test)]
@@ -31,6 +31,6 @@ mod tests {
 
         let assembly = assembunny::parse_assembly(&lines);
         let registry_results = assembunny::execute_assembly(&assembly, [].into(), |_,_|panic!());
-        assert_eq!(registry_results["a"], 42);
+        assert_eq!(registry_results[&'a'], 42);
     }
 }

@@ -4,21 +4,36 @@ use regex::Regex;
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Clone, Eq)]
+pub enum Value {
+    Registry(char),
+    Numeric(i32)
+}
+
+#[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Instructions {
-    Cpy(String, String),
-    Inc(String),
-    Dec(String),
-    Jnz(String, String),
-    Tgl(String),
-    Mul(String, String, String),
-    Out(String),
+    Cpy(Value, Value),
+    Inc(Value),
+    Dec(Value),
+    Jnz(Value, Value),
+    Tgl(Value),
+    Mul(Value, Value, Value),
+    Out(Value),
     Pass(),
 }
 
-fn extract_capture(captures: &regex::Captures, index: usize) -> String {
+fn extract_capture<'a>(captures: & 'a regex::Captures, index: usize) -> &'a str {
     captures.get(index).map_or_else(
         || panic!("Capture group {} not found", index),
-        |capture| capture.as_str().to_string())
+        |capture| capture.as_str())
+}
+
+fn value_from_string(val: &str) -> Value {
+    if let Some(val) = val.parse().ok() {
+        Value::Numeric(val)
+    }
+    else {
+        Value::Registry(val.chars().nth(0).unwrap())
+    }
 }
 
 fn parse_instruction(line: &str) -> Option::<Instructions> {
@@ -34,12 +49,12 @@ fn parse_instruction(line: &str) -> Option::<Instructions> {
     PATTERNS.iter().enumerate().find_map(|(i, pattern)| {
         if let Some(captures) = pattern.captures(line) {
             let instruction = match i {
-                0 => Instructions::Cpy(extract_capture(&captures, 1), extract_capture(&captures, 2)),
-                1 => Instructions::Inc(extract_capture(&captures, 1)),
-                2 => Instructions::Dec(extract_capture(&captures, 1)),
-                3 => Instructions::Jnz(extract_capture(&captures, 1), extract_capture(&captures, 2)),
-                4 => Instructions::Tgl(extract_capture(&captures, 1)),
-                5 => Instructions::Out(extract_capture(&captures, 1)),
+                0 => Instructions::Cpy(value_from_string(extract_capture(&captures, 1)), value_from_string(extract_capture(&captures, 2))),
+                1 => Instructions::Inc(value_from_string(extract_capture(&captures, 1))),
+                2 => Instructions::Dec(value_from_string(extract_capture(&captures, 1))),
+                3 => Instructions::Jnz(value_from_string(extract_capture(&captures, 1)), value_from_string(extract_capture(&captures, 2))),
+                4 => Instructions::Tgl(value_from_string(extract_capture(&captures, 1))),
+                5 => Instructions::Out(value_from_string(extract_capture(&captures, 1))),
                 _ => unreachable!(),
             };
             return Some(instruction);
@@ -60,16 +75,14 @@ pub fn parse_assembly(lines: &[&str]) -> Vec<Instructions> {
     })
 }
 
-fn get_value(values: &HashMap<String, i32>, val: &str) -> i32 {
-    if let Some(val) = val.parse().ok() {
-        val
-    }
-    else {
-        *values.get(val).unwrap_or(&0)
+fn get_value(values: &HashMap<char, i32>, val: &Value) -> i32 {
+    match val {
+        Value::Numeric(val) => *val,
+        Value::Registry(reg) => *values.get(reg).unwrap_or(&0)
     }
 }
 
-fn get_multiplication_result_reg<'a>(instructions: &[&'a Instructions]) -> Option<&'a String> {
+fn get_multiplication_result_reg<'a>(instructions: &[&'a Instructions]) -> Option<&'a Value> {
     instructions.iter().skip(3).take(2).find_map(|instruction|
         if let Instructions::Inc(reg) = instruction {
             Some(reg)
@@ -104,9 +117,9 @@ fn get_optimized_instructions(instructions: &[&Instructions]) -> Option<Vec<Inst
 
     
     let mut iter = iter.skip(5);
-    if matches!(iter.next()?, Instructions::Jnz(reg, value) if reg != multiplier1 || value != "-2") { return None; }
-    if matches!(iter.next()?, Instructions::Dec(reg) if reg != multiplier2) { return None; }
-    if matches!(iter.next()?, Instructions::Jnz(reg, value) if reg != multiplier2 || value != "-5") { return None; }
+    if !matches!(iter.next()?, Instructions::Jnz(reg, value) if reg == multiplier1 && matches!(value, Value::Numeric(-2))) { return None; }
+    if !matches!(iter.next()?, Instructions::Dec(reg) if reg == multiplier2) { return None; }
+    if !matches!(iter.next()?, Instructions::Jnz(reg, value) if reg == multiplier2 && matches!(value, Value::Numeric(-5))) { return None; }
 
     let cpy_instructions = 
         instructions.iter().take(3).map(|x|(**x).clone()).
@@ -133,8 +146,8 @@ fn optimize_assembly(assembly: &[Instructions]) -> Vec<Instructions> {
     optimized_assembly 
 }
 
-pub fn execute_assembly<OutputF>(assembly: &[Instructions], initial_values: HashMap<String, i32>, mut output: OutputF) -> HashMap<String, i32> 
-where OutputF: FnMut(&HashMap<String, i32>, i32) -> bool 
+pub fn execute_assembly<OutputF>(assembly: &[Instructions], initial_values: HashMap<char, i32>, mut output: OutputF) -> HashMap<char, i32> 
+where OutputF: FnMut(&HashMap<char, i32>, i32) -> bool 
 {
     let mut index: usize = 0;
     let mut values = initial_values;
@@ -143,17 +156,21 @@ where OutputF: FnMut(&HashMap<String, i32>, i32) -> bool
     while index < assembly.len() {
         index = match &assembly[index] {
             Instructions::Cpy(value, registry) => {
-                if registry.parse::<i32>().is_err() {
-                    values.insert(registry.clone(), get_value(&values, value));
+                if let Value::Registry(registry) = registry {
+                    values.insert(*registry, get_value(&values, value));
                 }
                 index + 1    
             }
             Instructions::Inc(registry) => {
-                values.entry(registry.clone()).and_modify(|value| *value += 1);
+                if let Value::Registry(registry) = registry {
+                    values.entry(*registry).and_modify(|value| *value += 1);
+                }
                 index + 1
             }
             Instructions::Dec(registry) => {
-                values.entry(registry.clone()).and_modify(|value| *value -= 1);
+                if let Value::Registry(registry) = registry {
+                    values.entry(*registry).and_modify(|value| *value -= 1);
+                }
                 index + 1
             }
             Instructions::Jnz(value, jump) => {
@@ -181,11 +198,13 @@ where OutputF: FnMut(&HashMap<String, i32>, i32) -> bool
                 index + 1
             }
             Instructions::Pass() => panic!("multiplication should jump over these intstructions and no other instruction should jump here"),
-            Instructions::Mul(val1, val2, registry) => {
-                let original_value = get_value(&values, registry); 
-                let val1 = get_value(&values, val1);
-                let val2 = get_value(&values, val2);
-                values.insert(registry.clone(), val1 * val2 + original_value);
+            Instructions::Mul(val1, val2, destination) => {
+                if let Value::Registry(registry) = destination {
+                    let original_value = get_value(&values, destination);
+                    let val1 = get_value(&values, val1); 
+                    let val2 = get_value(&values, val2);
+                    values.insert(registry.clone(), val1 * val2 + original_value);    
+                }
                 index + 5
             }
             Instructions::Out(val) => {
