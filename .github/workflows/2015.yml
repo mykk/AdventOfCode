@@ -33,4 +33,4 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Run custom test script
       run: |
-        python include_all.py
+        python 2015/include_all.py
