@@ -19,5 +19,6 @@ def main():
    print("part 1: ", part1(input_str))
    print("part 2: ", part2(input_str))
 
+assert(1 == 5)
 if __name__ == '__main__':
    main()
