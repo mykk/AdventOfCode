@@ -66,7 +66,7 @@ mod air_duct_spelunking {
                 return None;
             }
 
-            Some(find_shortest_route_inner(*current_node, graph, visited.iter().chain([current_node]).map(|c|*c).collect(), current_distance + distance, return_to_zero))
+            Some(find_shortest_route_inner(*current_node, graph, visited.iter().chain([current_node]).copied().collect(), current_distance + distance, return_to_zero))
         }).min().unwrap_or_else(||on_final_node(node, graph, distance, return_to_zero))
     }
 

@@ -17,7 +17,8 @@ mod like_a_rogue {
         }).collect()
     }
     
-    fn get_trap_functions() -> Vec<fn(Tile, Tile, Tile) -> bool> {
+    type TrapFunctions = Vec<fn(Tile, Tile, Tile) -> bool>;
+    fn get_trap_functions() -> TrapFunctions {
         vec![
             |left: Tile, center: Tile, right: Tile| { left == Tile::Trap && center == Tile::Trap && right == Tile::Safe },
             |left: Tile, center: Tile, right: Tile| { left == Tile::Safe && center == Tile::Trap && right == Tile::Trap },
@@ -26,7 +27,7 @@ mod like_a_rogue {
         ]
     } 
 
-    const TRAP_FUNCTIONS: Lazy<Vec<fn(Tile, Tile, Tile) -> bool>> = Lazy::new(||get_trap_functions());
+    static TRAP_FUNCTIONS: Lazy<TrapFunctions> = Lazy::new(get_trap_functions);
 
     fn get_next_row(current_row: &[Tile]) -> Vec<Tile> {
         current_row.iter().enumerate().map(|(i, center)| {

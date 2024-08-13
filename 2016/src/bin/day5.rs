@@ -1,5 +1,5 @@
 pub mod door_hacking {
-    use std::{collections::HashSet, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Mutex}, usize};
+    use std::{collections::HashSet, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Mutex}};
 
     use md5;
 

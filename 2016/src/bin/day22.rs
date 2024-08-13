@@ -1,7 +1,7 @@
 mod grid_computing {
     use once_cell::sync::Lazy;
     use std::{cmp::Ordering, collections::{BinaryHeap, HashSet}};
-    use regex;
+    
 
     #[derive(Clone, Debug, PartialEq, Eq, Hash)]
     pub(crate) struct Node {
@@ -21,7 +21,7 @@ mod grid_computing {
         static REG: Lazy<regex::Regex> = Lazy::new(||regex::Regex::new(r"x(\d+)-y(\d+)\s+(\d+)T\s+(\d+)T").unwrap());
 
         lines.iter().skip(2).map(|line| {
-            let captures = REG.captures(&line)?;
+            let captures = REG.captures(line)?;
             Some(Node{x: captures[1].parse().ok()?, y: captures[2].parse().ok()?, size: captures[3].parse().ok()?, used: captures[4].parse().ok()?})
         }).collect()
     }

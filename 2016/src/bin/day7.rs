@@ -46,7 +46,7 @@ mod tls_support {
             if bab.len() != 3 || bab[0] != bab[2]{
                 return false;
             }
-            aba.chars().nth(0).unwrap() == bab[1] && aba.chars().nth(1).unwrap() == bab[0]
+            aba.chars().next().unwrap() == bab[1] && aba.chars().nth(1).unwrap() == bab[0]
         })
     }
 
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn test_tls_support_count() {
-        assert!(2 == count_tls_support(&vec!["abba[mnop]qrst", "abcd[bddb]xyyx", "aaaa[qwer]tyui", "ioxxoj[asdfgh]zxcvbn"]));
+        assert!(2 == count_tls_support(&["abba[mnop]qrst", "abcd[bddb]xyyx", "aaaa[qwer]tyui", "ioxxoj[asdfgh]zxcvbn"]));
     }
 
    #[test]
@@ -115,6 +115,6 @@ mod tests {
 
    #[test]
    fn test_ssl_support_count() {
-       assert!(3 == count_ssl_support(&vec!["aba[bab]xyz", "xyx[xyx]xyx", "aaa[kek]eke", "zazbz[bzb]cdb"]));
+       assert!(3 == count_ssl_support(&["aba[bab]xyz", "xyx[xyx]xyx", "aaa[kek]eke", "zazbz[bzb]cdb"]));
    }
 }

@@ -10,9 +10,7 @@ mod room {
 
     impl Room {
         fn parse_checksum(last_part: &str) -> Option<&str> {
-            last_part.find('[').and_then(|i|last_part[i + 1 ..].find(']').and_then(|j| {
-                Some(&last_part[i + 1 .. i + 1 + j])
-            }))
+            last_part.find('[').and_then(|i|last_part[i + 1 ..].find(']').map(|j| &last_part[i + 1 .. i + 1 + j]))
         }
 
         fn parse_num(last_part: &str) -> Option<u32> {

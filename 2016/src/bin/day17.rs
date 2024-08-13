@@ -1,6 +1,6 @@
 mod two_steps_forward {
     use std::{cmp::Ordering, collections::{BinaryHeap, HashMap}};
-    use md5;
+    
     use once_cell::sync::Lazy;
 
     #[derive(Debug, PartialEq, Clone, Eq, Hash)]
@@ -20,9 +20,10 @@ mod two_steps_forward {
             other.path.len().cmp(&self.path.len())
         }
     }
-    
-    fn get_direction_operations() -> HashMap<char, fn((i8, i8)) -> (i8, i8)> {
-        let mut direction_operations: HashMap<char, fn((i8, i8)) -> (i8, i8)> = HashMap::new();
+    type DirFunctions = HashMap<char, fn((i8, i8)) -> (i8, i8)>;
+
+    fn get_direction_operations() -> DirFunctions {
+        let mut direction_operations: DirFunctions = HashMap::new();
         direction_operations.insert('U', |xy: (i8, i8)| (xy.0, xy.1 - 1));
         direction_operations.insert('D', |xy: (i8, i8)| (xy.0, xy.1 + 1));
         direction_operations.insert('L', |xy: (i8, i8)| (xy.0 - 1, xy.1));
@@ -32,7 +33,7 @@ mod two_steps_forward {
 
     const GOOD_CHARS: &[char] = &['b', 'c', 'd', 'e', 'f'];
     const DIRECTIONS: &[char] = &['U', 'D', 'L', 'R'];
-    const DIRECTION_OPERATIONS: Lazy<HashMap<char, fn((i8, i8)) -> (i8, i8)>> = Lazy::new(||get_direction_operations());
+    static DIRECTION_OPERATIONS: Lazy<DirFunctions> = Lazy::new(get_direction_operations);
 
     fn create_new_state(current_state: &State, digest: &str, dir: char) -> Option<State> {
         if !GOOD_CHARS.contains(&digest.chars().nth(DIRECTIONS.iter().position(|x|*x == dir).unwrap()).unwrap()) {
