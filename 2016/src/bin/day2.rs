@@ -31,7 +31,7 @@ pub mod keypad_solver {
             }
         }
 
-        pub fn solve(&self, directions: &Vec<Vec<Direction>>) -> String {
+        pub fn solve(&self, directions: &[Vec<Direction>]) -> String {
             let (sequence, _) = directions.iter().fold(
                 (String::new(), self.instructions.get_start_position()), 
                 |(mut sequence, position), direction| 
@@ -48,6 +48,12 @@ pub mod keypad_solver {
     }
     
     pub struct AocPart1Solver;
+
+    impl Default for AocPart1Solver {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
 
     impl AocPart1Solver {
         pub fn new() -> Self {
@@ -78,6 +84,12 @@ pub mod keypad_solver {
     }
 
     pub struct AocPart2Solver;
+
+    impl Default for AocPart2Solver {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
 
     impl AocPart2Solver {
         pub fn new() -> Self {
@@ -125,7 +137,7 @@ pub mod keypad_solver {
 
     pub fn parse_directions(content: &str) -> Option<Vec<Vec<Direction>>> {
         content.split_whitespace()
-            .map(|word| word.chars().map(|c| char_to_direction(c)).collect())
+            .map(|word| word.chars().map(char_to_direction).collect())
             .collect()
     }
 }

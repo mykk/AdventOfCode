@@ -28,11 +28,11 @@ fn extract_capture<'a>(captures: & 'a regex::Captures, index: usize) -> &'a str 
 }
 
 fn value_from_string(val: &str) -> Value {
-    if let Some(val) = val.parse().ok() {
+    if let Ok(val) = val.parse() {
         Value::Numeric(val)
     }
     else {
-        Value::Registry(val.chars().nth(0).unwrap())
+        Value::Registry(val.chars().next().unwrap())
     }
 }
 
@@ -203,7 +203,7 @@ where OutputF: FnMut(&HashMap<char, i32>, i32) -> bool
                     let original_value = get_value(&values, destination);
                     let val1 = get_value(&values, val1); 
                     let val2 = get_value(&values, val2);
-                    values.insert(registry.clone(), val1 * val2 + original_value);    
+                    values.insert(*registry, val1 * val2 + original_value);    
                 }
                 index + 5
             }

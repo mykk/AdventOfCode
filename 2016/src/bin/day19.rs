@@ -42,7 +42,7 @@ mod an_elephant_named_joseph {
         let last = elves.iter().take(remove_counter * 2);
 
         let elves = first.chain(middle_removed).chain(middle_remainder).chain(last);
-        return get_lucky_elf_from_list_improved(elves.into_iter().map(|x|*x).collect());
+        get_lucky_elf_from_list_improved(elves.into_iter().copied().collect())
     }
 
     pub(crate) fn get_lucky_elf(elf_count: usize) -> usize {

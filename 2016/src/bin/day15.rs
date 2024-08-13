@@ -1,7 +1,7 @@
 mod timing_is_everything {
     use once_cell::sync::Lazy;
-    use regex;
-    use num_integer;
+    
+    
 
     pub(crate) struct Disc {
         pub(crate) level: usize,
@@ -53,7 +53,7 @@ mod tests {
 
     #[test]
     fn test_example() {
-        assert_eq!(5, find_best_timing(&vec![Disc{level : 1, available_positions: 5, position_at_zero: 4}, 
+        assert_eq!(5, find_best_timing(&[Disc{level : 1, available_positions: 5, position_at_zero: 4}, 
             Disc{level : 2, available_positions : 2, position_at_zero : 1}]).0);
     }
 }

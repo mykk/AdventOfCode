@@ -63,7 +63,7 @@ mod radioisotope_thermoelectric_generators {
         lines.iter().map(|line| {
             let microchips = parse_components(line, &MICROCHIP_GROUP_REGEX, ThermoelectricComponent::Microchip);
             let generators = parse_components(line, &GENERATOR_GROUP_REGEX, ThermoelectricComponent::Generator);
-            microchips.into_iter().chain(generators.into_iter()).collect()
+            microchips.into_iter().chain(generators).collect()
         }).collect()
     }
 
@@ -111,7 +111,7 @@ mod radioisotope_thermoelectric_generators {
             //move pairs
             for other_component in current_state[current_floor].iter().skip(index + 1) {
                 let mut new_state = new_state_template.clone();
-                new_state[current_floor] = current_state[current_floor].iter().filter(|x| *x != component && *x != other_component).map(|x|x.clone()).collect();
+                new_state[current_floor] = current_state[current_floor].iter().filter(|x| *x != component && *x != other_component).cloned().collect();
                 new_state[new_floor].insert(component.clone());
                 new_state[new_floor].insert(other_component.clone());                
                 vec.push(new_state)    
@@ -119,7 +119,7 @@ mod radioisotope_thermoelectric_generators {
 
             //move singles
             let mut new_state = new_state_template.clone();
-            new_state[current_floor] = current_state[current_floor].iter().filter(|x| *x != component).map(|x|x.clone()).collect();
+            new_state[current_floor] = current_state[current_floor].iter().filter(|x| *x != component).cloned().collect();
             new_state[new_floor].insert(component.clone());
             vec.push(new_state);
 
@@ -168,7 +168,7 @@ mod radioisotope_thermoelectric_generators {
     }
 
     pub(crate) fn find_optimal_move_pattern(compoenents: &[HashSet<ThermoelectricComponent>]) -> i32 {
-        move_components_bfs(&compoenents)
+        move_components_bfs(compoenents)
     }
 }
 
@@ -176,7 +176,7 @@ fn main() {
     use aoc_2016::utils::aoc_file;
     let content = aoc_file::open_and_read_file(&mut std::env::args()).unwrap();
 
-    let lines = &content.lines().collect::<Vec<_>>();
+    let lines = content.lines().collect::<Vec<_>>();
     let components = radioisotope_thermoelectric_generators::parse_input(&lines);
 
     println!("part1: {}", radioisotope_thermoelectric_generators::find_optimal_move_pattern(&components));
@@ -188,7 +188,7 @@ fn main() {
         ThermoelectricComponent::Microchip(Rc::new(String::from("dilithium")))]);
 
     let mut components = components.clone();
-    components[0].extend(additional_components.into_iter());
+    components[0].extend(additional_components);
     println!("part2: {}", radioisotope_thermoelectric_generators::find_optimal_move_pattern(&components));
 }
 

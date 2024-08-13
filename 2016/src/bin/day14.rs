@@ -1,8 +1,8 @@
 mod one_time_pad {
     use once_cell::sync::Lazy;
-    use md5;
-    use fancy_regex;
-    use regex;
+    
+    
+    
 
     fn get_digest(salt: &str, index: u32, stretching: u32) -> String {
         let digest = format!("{:x}", md5::compute(format!("{}{}", salt, index)));
@@ -25,10 +25,10 @@ mod one_time_pad {
                 let five_repeat_regex = regex::Regex::new(&format!(r"{}{{5}}", repeat_char)).unwrap();
                 potential_new_keys.push((i, five_repeat_regex));
             }
-            potential_new_keys = potential_new_keys.into_iter().filter(|(index, _)| *index + 1000 >= i).collect();
+            potential_new_keys.retain(|(index, _)| *index + 1000 >= i);
             
             new_keys.append(&mut potential_new_keys.iter().filter(|(index, re)| *index != i && re.is_match(&digest)).map(|(index, _)|*index).collect());
-            potential_new_keys = potential_new_keys.into_iter().filter(|(index, re)| *index == i || !re.is_match(&digest)).collect();
+            potential_new_keys.retain(|(index, re)| *index == i || !re.is_match(&digest));
 
             if new_keys.len() >= limit {
                 new_keys.sort();

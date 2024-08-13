@@ -82,7 +82,7 @@ pub mod door_auth {
 
     pub(crate) fn get_door_sum(door_display: &[Vec<bool>]) -> usize {
         door_display.par_iter()
-            .map(|row| { row.par_iter().fold(||0, |count, p| count + 1 * *p as usize).sum::<usize>() })
+            .map(|row| { row.par_iter().fold(||0, |count, p| count + *p as usize).sum::<usize>() })
             .sum()
     }
 }

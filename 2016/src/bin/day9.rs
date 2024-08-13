@@ -16,7 +16,7 @@ mod decompose {
             Some(mat) => {
                 let (char_count, repeat) = get_marker_values(mat.as_str());
 
-                repeat * char_count_callback(&mat, &line, char_count) +
+                repeat * char_count_callback(&mat, line, char_count) +
                 count_decomposed(&line[mat.end() + char_count..], char_count_callback) + 
                 line[..mat.start()].len()
             }

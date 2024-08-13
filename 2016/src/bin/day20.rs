@@ -10,7 +10,7 @@ mod firewall_rules {
     pub(crate) fn find_smallest_allowed_ip(blocked_ips: &[(u32, u32)], from: u32) -> Option<u32> {
         let mut maybe_smallest_ip = from;
         while let Some(current) = blocked_ips.iter().find(|ip_range| ip_range.0 <= maybe_smallest_ip && ip_range.1 >= maybe_smallest_ip) {
-            if u32::max_value() == current.1 { 
+            if u32::MAX == current.1 { 
                 return None;
             }
             maybe_smallest_ip = current.1 + 1;
@@ -23,10 +23,10 @@ mod firewall_rules {
             if let Some(min_blocked) = blocked_ips.iter().filter(|ip_range|ip_range.0 > current_ip).min_by_key(|ip_range|ip_range.0) {
                 return min_blocked.0 - current_ip + find_allowed_ip_count(blocked_ips, min_blocked.1);
             }
-            return u32::max_value() - current_ip;
+            return u32::MAX - current_ip;
         }
 
-        return 0;
+        0
     }
 }
 
@@ -47,7 +47,7 @@ mod tests {
     #[test]
     fn test_example() {
         use crate::firewall_rules::{find_smallest_allowed_ip, find_allowed_ip_count};
-        assert_eq!(3, find_smallest_allowed_ip(&vec![(5, 8), (0, 2), (4, 7)], 0).unwrap());
-        assert_eq!(u32::max_value() - 8, find_allowed_ip_count(&vec![(5, 8), (0, 2), (4, 7)], 0));
+        assert_eq!(3, find_smallest_allowed_ip(&[(5, 8), (0, 2), (4, 7)], 0).unwrap());
+        assert_eq!(u32::MAX - 8, find_allowed_ip_count(&[(5, 8), (0, 2), (4, 7)], 0));
     }
 }

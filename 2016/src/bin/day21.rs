@@ -1,5 +1,5 @@
 mod scrambled_letters_and_hash {
-    use regex;
+    
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub(crate) enum Rotate {
@@ -77,40 +77,41 @@ mod scrambled_letters_and_hash {
     
         pub(crate) fn scramble(&self, seed: &str) -> String {
             match self {
-                Scrambling::SwapPosition(x, y) => Self::swap_position(&seed, *x, *y),
-                Scrambling::SwapLetter(x, y) => Self::swap_letter(&seed, *x, *y),
-                Scrambling::Rotate(rotate, x) => Self::rotate_sized(&seed, *rotate, *x),
-                Scrambling::RotateLetterBased(x) => Self::rotate_letter_based(&seed, *x),
-                Scrambling::Reverse(x, y) => Self::reverse(&seed, *x, *y),
-                Scrambling::Move(x, y) => Self::move_from_to_position(&seed, *x, *y)
+                Scrambling::SwapPosition(x, y) => Self::swap_position(seed, *x, *y),
+                Scrambling::SwapLetter(x, y) => Self::swap_letter(seed, *x, *y),
+                Scrambling::Rotate(rotate, x) => Self::rotate_sized(seed, *rotate, *x),
+                Scrambling::RotateLetterBased(x) => Self::rotate_letter_based(seed, *x),
+                Scrambling::Reverse(x, y) => Self::reverse(seed, *x, *y),
+                Scrambling::Move(x, y) => Self::move_from_to_position(seed, *x, *y)
             }
         }
 
         pub(crate) fn unscramble(&self, seed: &str) -> String {
             match self {
-                Scrambling::SwapPosition(x, y) => Self::swap_position(&seed, *x, *y),
-                Scrambling::SwapLetter(x, y) => Self::swap_letter(&seed, *x, *y),
-                Scrambling::Rotate(rotate, x) => Self::rotate_sized(&seed, rotate.inverse(), *x),
-                Scrambling::RotateLetterBased(x) => Self::reverse_rotate_letter_based(&seed, *x),
-                Scrambling::Reverse(x, y) => Self::reverse(&seed, *x, *y),
-                Scrambling::Move(x, y) => Self::move_from_to_position(&seed, *y, *x)
+                Scrambling::SwapPosition(x, y) => Self::swap_position(seed, *x, *y),
+                Scrambling::SwapLetter(x, y) => Self::swap_letter(seed, *x, *y),
+                Scrambling::Rotate(rotate, x) => Self::rotate_sized(seed, rotate.inverse(), *x),
+                Scrambling::RotateLetterBased(x) => Self::reverse_rotate_letter_based(seed, *x),
+                Scrambling::Reverse(x, y) => Self::reverse(seed, *x, *y),
+                Scrambling::Move(x, y) => Self::move_from_to_position(seed, *y, *x)
             }
         }
     }
 
+    type ScramblingFunc = Box<dyn Fn(regex::Captures) -> Scrambling>;
     pub(crate) fn parse(lines: &[&str]) -> Option<Vec<Scrambling>> {
-        let scramble_regex: Vec<(regex::Regex, Box<dyn Fn(regex::Captures) -> Scrambling>)> = vec![
+        let scramble_regex: Vec<(regex::Regex, ScramblingFunc)> = vec![
             (regex::Regex::new(r"swap position (\d+) with position (\d+)").unwrap(), Box::new(|capture|Scrambling::SwapPosition(capture[1].parse().unwrap(), capture[2].parse().unwrap()))),
-            (regex::Regex::new(r"swap letter (\w) with letter (\w)").unwrap(), Box::new(|capture|Scrambling::SwapLetter(capture[1].chars().nth(0).unwrap(), capture[2].chars().nth(0).unwrap()))), 
+            (regex::Regex::new(r"swap letter (\w) with letter (\w)").unwrap(), Box::new(|capture|Scrambling::SwapLetter(capture[1].chars().next().unwrap(), capture[2].chars().next().unwrap()))), 
             (regex::Regex::new(r"rotate left (\d+) step").unwrap(), Box::new(|capture|Scrambling::Rotate(Rotate::Left, capture[1].parse().unwrap()))),
             (regex::Regex::new(r"rotate right (\d+) step").unwrap(), Box::new(|capture|Scrambling::Rotate(Rotate::Right, capture[1].parse().unwrap()))),
-            (regex::Regex::new(r"rotate based on position of letter (\w)").unwrap(), Box::new(|capture|Scrambling::RotateLetterBased(capture[1].chars().nth(0).unwrap()))),
+            (regex::Regex::new(r"rotate based on position of letter (\w)").unwrap(), Box::new(|capture|Scrambling::RotateLetterBased(capture[1].chars().next().unwrap()))),
             (regex::Regex::new(r"reverse positions (\d+) through (\d+)").unwrap(), Box::new(|capture|Scrambling::Reverse(capture[1].parse().unwrap(), capture[2].parse().unwrap()))),
             (regex::Regex::new(r"move position (\d+) to position (\d+)").unwrap(), Box::new(|capture|Scrambling::Move(capture[1].parse().unwrap(), capture[2].parse().unwrap())))
         ];
 
         lines.iter().map(|line| {
-            scramble_regex.iter().find_map(|(reg, factory)|{ Some(factory(reg.captures(&line)?)) })
+            scramble_regex.iter().find_map(|(reg, factory)|{ Some(factory(reg.captures(line)?)) })
         }).collect()
     }
 

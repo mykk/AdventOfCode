@@ -69,9 +69,7 @@ pub mod distance_solver {
         if end.0 != start.0 {
             if end.0 > start.0 { (1, 0) } else { (-1, 0) }
         } 
-        else {
-            if end.1 > start.1 { (0, 1) } else { (0, -1) } 
-        };
+        else if end.1 > start.1 { (0, 1) } else { (0, -1) };
         
         let mut current = start;
         while current != end {

@@ -56,7 +56,7 @@ where T: AsRef<str>
         let sides = parse_sides(line.as_ref()).map_err(|_| TriangleError::IntParseError)?;
 
         match index {
-            0 => current_triangles = sides.iter().map(|side| Triangle{0: *side, 1: 0, 2: 0}).collect(),
+            0 => current_triangles = sides.iter().map(|side| Triangle(*side, 0, 0)).collect(),
             1 => sides.iter().enumerate().for_each(|(i, side)| current_triangles[i].1 = *side),
             2 => {
                 sides.iter().enumerate().for_each(|(i, side)| current_triangles[i].2 = *side);
@@ -105,16 +105,16 @@ mod tests {
 
     #[test]
     fn test_impossible_triangle() {
-        assert!(!possible_triangle(&Triangle{0: 5, 1: 10, 2: 25}));
+        assert!(!possible_triangle(&Triangle(5, 10, 25)));
     }
 
     #[test]
     fn test_possible_triangle() {
-        assert!(possible_triangle(&Triangle{0: 10, 1: 16, 2: 25}));
+        assert!(possible_triangle(&Triangle(10, 16, 25)));
     }
 
     #[test]
     fn test_impossible_triangle_() {
-        assert!(!possible_triangle(&Triangle{0: 10, 1: 15, 2: 25}));
+        assert!(!possible_triangle(&Triangle(10, 15, 25)));
     }
 }
