@@ -5,6 +5,7 @@ on:
     branches: [ "master" ]
     paths:
       - '2016/**'
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
