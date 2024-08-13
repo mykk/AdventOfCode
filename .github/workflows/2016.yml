@@ -17,8 +17,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build
+      working-directory: "2016"
       run: cargo build --verbose
     - name: Run tests debug
+      working-directory: "2016"
       run: cargo test --verbose
     - name: Run tests release
+      working-directory: "2016"
       run: cargo test --verbose --release
