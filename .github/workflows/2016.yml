@@ -17,6 +17,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Install Rust and Clippy
+      run: rustup component add clippy
+    - name: Run Clippy
+      working-directory: "2016"
+      run: cargo clippy --all-targets --all-features -- -D warnings
     - name: Build
       working-directory: "2016"
       run: cargo build --verbose
