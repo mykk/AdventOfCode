@@ -24,7 +24,7 @@ func TestParseInputData(t *testing.T) {
 }
 
 func TestFindDistnace(t *testing.T) {
-	t.Run("TestTestFindDistnace", func(t *testing.T) {
+	t.Run("TestFindDistnace", func(t *testing.T) {
 		assert.Equal(t, 11, FindDistnace([]int{3, 4, 2, 1, 3, 3}, []int{4, 3, 5, 3, 9, 3}))
 	})
 }

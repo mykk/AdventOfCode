@@ -30,8 +30,22 @@ func CountIf[T any](slice []T, predicate func(val T) bool) int {
 	return count
 }
 
-func TransformAppend[T any, TFrom any](splice []T, value TFrom, predicate func(value TFrom) (T, error)) ([]T, error) {
-	transformed, err := predicate(value)
+func Transform[T any, TFrom any](splice []TFrom, transform func(value TFrom) (T, error)) ([]T, error) {
+	transformed := []T{}
+	var err error
+
+	for _, el := range splice {
+		transformed, err = TransformAppend(transformed, el, transform)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return transformed, nil
+}
+
+func TransformAppend[T any, TFrom any](splice []T, value TFrom, transform func(value TFrom) (T, error)) ([]T, error) {
+	transformed, err := transform(value)
 	if err != nil {
 		return nil, err
 	}
