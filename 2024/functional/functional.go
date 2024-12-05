@@ -64,3 +64,32 @@ func Reduce[T any, TFrom any](slice []TFrom, initial T, predicate func(index int
 
 	return initial
 }
+
+func All[T any](slice []T, predicate func(index int, el T) bool) bool {
+	for index, el := range slice {
+		if !predicate(index, el) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func Any[T any](slice []T, predicate func(index int, el T) bool) bool {
+	for index, el := range slice {
+		if predicate(index, el) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func Contains[T comparable](slice []T, element T) bool {
+	for _, v := range slice {
+		if v == element {
+			return true
+		}
+	}
+	return false
+}

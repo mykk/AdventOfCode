@@ -19,13 +19,13 @@ func withinBounds(grid [][]byte, pos Position) bool {
 	return pos.x >= 0 && pos.x < len(grid) && pos.y >= 0 && pos.y < len(grid[pos.x])
 }
 
-func followPattern(grid [][]byte, pos Position, pattern []byte, direction Direction) int {
-	if len(pattern) == 0 {
-		return 1
-	}
+func match(grid [][]byte, pos Position, target byte) bool {
+	return withinBounds(grid, pos) && grid[pos.x][pos.y] == target
+}
 
-	if withinBounds(grid, pos) && grid[pos.x][pos.y] == pattern[0] {
-		return followPattern(grid, Position{pos.x + direction.x, pos.y + direction.y}, pattern[1:], direction)
+func followPattern(grid [][]byte, pos Position, pattern []byte, dir Direction) int {
+	if fn.All(pattern, func(i int, cell byte) bool { return match(grid, Position{pos.x + dir.x*i, pos.y + dir.y*i}, cell) }) {
+		return 1
 	}
 	return 0
 }
