@@ -89,29 +89,22 @@ func ParseInputData(data string) (map[byte][]Position, Position, error) {
 		return nil, Position{}, errors.New("empty map")
 	}
 
-	return fn.Reduce(lines, map[byte][]Position{}, func(row int, antennas map[byte][]Position, line string) map[byte][]Position {
-		localAntennas := fn.Reduce([]byte(line), map[byte][]Position{}, func(column int, localAntennas map[byte][]Position, antenna byte) map[byte][]Position {
+	antennas := make(map[byte][]Position)
+	for row, line := range lines {
+		for column, antenna := range []byte(line) {
 			if antenna == '.' {
-				return localAntennas
+				continue
 			}
 
-			if _, exists := localAntennas[antenna]; exists {
-				localAntennas[antenna] = append(localAntennas[antenna], Position{x: column, y: row})
-			} else {
-				localAntennas[antenna] = []Position{{x: column, y: row}}
-			}
-			return localAntennas
-		})
-
-		for antenna, positions := range localAntennas {
 			if _, exists := antennas[antenna]; exists {
-				antennas[antenna] = append(antennas[antenna], positions...)
+				antennas[antenna] = append(antennas[antenna], Position{x: column, y: row})
 			} else {
-				antennas[antenna] = positions
+				antennas[antenna] = []Position{{x: column, y: row}}
 			}
 		}
-		return antennas
-	}), Position{x: len(lines[0]), y: len(lines)}, nil
+	}
+
+	return antennas, Position{x: len(lines[0]), y: len(lines)}, nil
 }
 
 func main() {
