@@ -24,35 +24,40 @@ func findMidSplit(digits int) int {
 	return split
 }
 
-func countCountPlutonianPebble(stone, blinkCount int, cache map[int]map[int]int) int {
+type Pair[A, B any] struct {
+	First  A
+	Second B
+}
+
+type StoneBlinkPair Pair[int, int]
+
+func countCountPlutonianPebble(stone, blinkCount int, cache map[StoneBlinkPair]int) int {
 	if blinkCount == 0 {
 		return 1
 	}
 
-	if stoneValues, found := cache[stone]; found {
-		if value, found := stoneValues[blinkCount]; found {
-			return value
-		}
-	} else {
-		cache[stone] = make(map[int]int)
+	if value, found := cache[StoneBlinkPair{stone, blinkCount}]; found {
+		return value
 	}
 
+	value := 0
 	if stone == 0 {
-		cache[stone][blinkCount] = countCountPlutonianPebble(1, blinkCount-1, cache)
+		value = countCountPlutonianPebble(1, blinkCount-1, cache)
 	} else if digits := countDigis(stone); digits%2 == 0 {
 		split := findMidSplit(digits)
-		value := countCountPlutonianPebble(stone%split, blinkCount-1, cache)
+		value = countCountPlutonianPebble(stone%split, blinkCount-1, cache)
 		value += countCountPlutonianPebble(stone/split, blinkCount-1, cache)
-		cache[stone][blinkCount] = value
 	} else {
-		cache[stone][blinkCount] = countCountPlutonianPebble(stone*2024, blinkCount-1, cache)
+		value = countCountPlutonianPebble(stone*2024, blinkCount-1, cache)
 	}
 
-	return cache[stone][blinkCount]
+	cache[StoneBlinkPair{stone, blinkCount}] = value
+
+	return value
 }
 
 func CountPlutonianPebbles(stones []int, blinkCount int) int {
-	cache := make(map[int]map[int]int)
+	cache := make(map[StoneBlinkPair]int)
 
 	return fn.Reduce(stones, 0, func(_, sum, stone int) int {
 		return sum + countCountPlutonianPebble(stone, blinkCount, cache)
