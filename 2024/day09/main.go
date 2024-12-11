@@ -1,6 +1,8 @@
 package main
 
 import (
+	fn "AoC/functional"
+
 	"fmt"
 	"os"
 	"strconv"
@@ -11,89 +13,76 @@ type Entry struct {
 	id    int
 }
 
-func FormatFile(blocks []Entry) int {
-	j := 0
-	for i := len(blocks) - 1; i != 0; i-- {
-		if blocks[i].space {
-			continue
-		}
-
-		for ; j < i; j++ {
-			if !blocks[j].space {
-				continue
-			}
-			blocks[i].space, blocks[j].space = true, false
-			blocks[i].id, blocks[j].id = blocks[j].id, blocks[i].id
-			break
+func nextSpaceLocation(entries []Entry, initial, limit int) int {
+	for i := initial; i < limit; i++ {
+		if entries[i].space {
+			return i
 		}
 	}
-
-	checksum := 0
-	for i, el := range blocks {
-		if el.space {
-			continue
-		}
-		checksum += i * el.id
-	}
-	return checksum
+	return limit
 }
 
-func FormatFile2(blocks []Entry) int {
-	for i := len(blocks) - 1; i >= 0; i-- {
-		if blocks[i].space {
+func formatFileMut(entries []Entry, getChunkSize func([]Entry, int) int) int {
+	spaceLocation := 0
+
+	for i := len(entries) - 1; i >= 0; i-- {
+		if entries[i].space {
 			continue
 		}
 
-		blockSize := 0
-		blockId := blocks[i].id
-		for ; i >= 0; i-- {
-			if blocks[i].space || blockId != blocks[i].id {
-				i++
+		chunkSize := getChunkSize(entries, i)
+		i -= chunkSize - 1
+
+		spaceLocation := nextSpaceLocation(entries, spaceLocation, i)
+
+		spaceSize := 0
+		for j := spaceLocation; j < i; j++ {
+			if !entries[j].space {
+				spaceSize = 0
+				continue
+			}
+			spaceSize++
+			if chunkSize == spaceSize {
+				for k := 0; k < chunkSize; k++ {
+					entries[i+k], entries[j-k] = Entry{true, 0}, Entry{false, entries[i+k].id}
+				}
 				break
 			}
-			blockSize++
-		}
-
-		for j := 0; j < i; j++ {
-			if !blocks[j].space {
-				continue
-			}
-
-			spaceSize := 0
-			for ; j < i; j++ {
-				if !blocks[j].space {
-					j--
-					break
-				}
-				spaceSize++
-				if blockSize == spaceSize {
-					break
-				}
-			}
-
-			if blockSize != spaceSize {
-				continue
-			}
-
-			for k := 0; k < blockSize; k++ {
-				blocks[i+k], blocks[j-k] = Entry{true, 0}, Entry{false, blockId}
-			}
-			break
 		}
 	}
 
-	checksum := 0
-	for i, el := range blocks {
-		if el.space {
-			continue
+	return fn.Reduce(entries, 0, func(i, checksum int, entry Entry) int {
+		return checksum + i*entry.id
+	})
+}
+
+func formatFile(entries []Entry, getChunkSize func([]Entry, int) int) int {
+	entiesCopy := make([]Entry, 0, len(entries))
+	entiesCopy = append(entiesCopy, entries...)
+
+	return formatFileMut(entiesCopy, getChunkSize)
+}
+
+func formatFileSingles(entries []Entry) int {
+	return formatFile(entries, func([]Entry, int) int { return 1 })
+}
+
+func FormatFileChunks(entries []Entry) int {
+	getChunkSize := func(entries []Entry, i int) (entriesize int) {
+		blockId := entries[i].id
+		for ; i >= 0; i-- {
+			if entries[i].space || blockId != entries[i].id {
+				return
+			}
+			entriesize++
 		}
-		checksum += i * el.id
+		return
 	}
-	return checksum
+	return formatFile(entries, getChunkSize)
 }
 
 func ParseInputData(data string) ([]Entry, error) {
-	blocks := make([]Entry, 0, len(data))
+	entries := make([]Entry, 0, len(data))
 
 	for i, el := range data {
 		val, err := strconv.Atoi(string(el))
@@ -102,13 +91,13 @@ func ParseInputData(data string) ([]Entry, error) {
 		}
 		for ; val > 0; val-- {
 			if i%2 == 0 {
-				blocks = append(blocks, Entry{false, i / 2})
+				entries = append(entries, Entry{false, i / 2})
 			} else {
-				blocks = append(blocks, Entry{true, 0})
+				entries = append(entries, Entry{true, 0})
 			}
 		}
 	}
-	return blocks, nil
+	return entries, nil
 }
 
 func main() {
@@ -118,18 +107,12 @@ func main() {
 		return
 	}
 
-	blocks1, err := ParseInputData(string(inputData))
+	entries, err := ParseInputData(string(inputData))
 	if err != nil {
 		fmt.Printf("Error parsing file: %v\n", err)
 		return
 	}
 
-	fmt.Printf("Part 1: %d\n", FormatFile(blocks1))
-
-	blocks2, err := ParseInputData(string(inputData))
-	if err != nil {
-		fmt.Printf("Error parsing file: %v\n", err)
-		return
-	}
-	fmt.Printf("Part 2: %d\n", FormatFile2(blocks2))
+	fmt.Printf("Part 1: %d\n", formatFileSingles(entries))
+	fmt.Printf("Part 2: %d\n", FormatFileChunks(entries))
 }
