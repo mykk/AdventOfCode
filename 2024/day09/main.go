@@ -63,7 +63,7 @@ func formatFile(entries []Entry, getChunkSize func([]Entry, int) int) int {
 	return formatFileMut(entiesCopy, getChunkSize)
 }
 
-func formatFileSingles(entries []Entry) int {
+func FormatFileSingles(entries []Entry) int {
 	return formatFile(entries, func([]Entry, int) int { return 1 })
 }
 
@@ -113,6 +113,6 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Part 1: %d\n", formatFileSingles(entries))
+	fmt.Printf("Part 1: %d\n", FormatFileSingles(entries))
 	fmt.Printf("Part 2: %d\n", FormatFileChunks(entries))
 }
