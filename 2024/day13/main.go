@@ -10,17 +10,17 @@ import (
 	"os"
 )
 
-func MustAtoi(s string) int {
+func MustAtoi(s string) int64 {
 	val, _ := strconv.Atoi(s)
-	return val
+	return int64(val)
 }
 
 type Direction struct {
-	dx, dy int
+	dx, dy int64
 }
 
 type Point struct {
-	x, y int
+	x, y int64
 }
 
 type ClawMachine struct {
@@ -29,33 +29,30 @@ type ClawMachine struct {
 	prize   Point
 }
 
-func winPrize(clawMachine ClawMachine, goalOffset int) int {
-	bestCombo := 0
-	currentGoal := Point{x: clawMachine.prize.x + goalOffset + clawMachine.buttonB.dx, y: clawMachine.prize.y + goalOffset + clawMachine.buttonB.dy}
+func winPrize(clawMachine ClawMachine, goalOffset int64) int64 {
+	goal := Point{x: clawMachine.prize.x + goalOffset, y: clawMachine.prize.y + goalOffset}
 
-	for bPress := 0; currentGoal.x > 0 && currentGoal.y > 0; bPress++ {
-		currentGoal = Point{currentGoal.x - clawMachine.buttonB.dx, currentGoal.y - clawMachine.buttonB.dy}
+	xa := clawMachine.buttonA.dx
+	xb := clawMachine.buttonB.dx
 
-		if currentGoal.x%clawMachine.buttonA.dx != 0 || currentGoal.y%clawMachine.buttonA.dy != 0 {
-			continue
-		}
+	ya := clawMachine.buttonA.dy
+	yb := clawMachine.buttonB.dy
 
-		if currentGoal.x/clawMachine.buttonA.dx != currentGoal.y/clawMachine.buttonA.dy {
-			continue
-		}
-
-		aPress := currentGoal.x / clawMachine.buttonA.dx
-		current := aPress*3 + bPress
-		if bestCombo == 0 || current < bestCombo {
-			bestCombo = current
-		}
+	if (goal.x*yb-goal.y*xb)%(xa*yb-ya*xb) != 0 {
+		return 0
 	}
+	a := (goal.x*yb - goal.y*xb) / (xa*yb - ya*xb)
 
-	return bestCombo
+	if (goal.x-a*xa)%xb != 0 {
+		return 0
+	}
+	b := (goal.x - a*xa) / xb
+
+	return a*3 + b
 }
 
-func WinPrizes(clawMachines []ClawMachine, goalOffset int) int {
-	return fn.Reduce(clawMachines, 0, func(_, sum int, machine ClawMachine) int { return sum + winPrize(machine, goalOffset) })
+func WinPrizes(clawMachines []ClawMachine, goalOffset int64) int64 {
+	return fn.Reduce(clawMachines, 0, func(_ int, sum int64, machine ClawMachine) int64 { return sum + winPrize(machine, goalOffset) })
 }
 
 func ParseInputData(data string) ([]ClawMachine, error) {
