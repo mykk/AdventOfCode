@@ -24,19 +24,19 @@ type Point struct {
 }
 
 type ClawMachine struct {
-	buttonA Direction
-	buttonB Direction
-	prize   Point
+	a     Direction
+	b     Direction
+	prize Point
 }
 
 func winPrize(clawMachine ClawMachine, goalOffset int64) int64 {
 	goal := Point{x: clawMachine.prize.x + goalOffset, y: clawMachine.prize.y + goalOffset}
 
-	xa := clawMachine.buttonA.dx
-	xb := clawMachine.buttonB.dx
+	xa := clawMachine.a.dx
+	xb := clawMachine.b.dx
 
-	ya := clawMachine.buttonA.dy
-	yb := clawMachine.buttonB.dy
+	ya := clawMachine.a.dy
+	yb := clawMachine.b.dy
 
 	if (goal.x*yb-goal.y*xb)%(xa*yb-ya*xb) != 0 {
 		return 0
@@ -71,14 +71,14 @@ func ParseInputData(data string) ([]ClawMachine, error) {
 		if len(matches) != 1 && len(matches[0]) != 3 {
 			return nil, errors.New("bad input")
 		}
-		buttonA := Direction{dx: MustAtoi(matches[0][1]), dy: MustAtoi(matches[0][2])}
+		a := Direction{dx: MustAtoi(matches[0][1]), dy: MustAtoi(matches[0][2])}
 		i++
 
 		matches = reB.FindAllStringSubmatch(inputLines[i], -1)
 		if len(matches) != 1 && len(matches[0]) != 3 {
 			return nil, errors.New("bad input")
 		}
-		buttonB := Direction{dx: MustAtoi(matches[0][1]), dy: MustAtoi(matches[0][2])}
+		b := Direction{dx: MustAtoi(matches[0][1]), dy: MustAtoi(matches[0][2])}
 		i++
 
 		matches = rePrize.FindAllStringSubmatch(inputLines[i], -1)
@@ -88,7 +88,7 @@ func ParseInputData(data string) ([]ClawMachine, error) {
 		prize := Point{x: MustAtoi(matches[0][1]), y: MustAtoi(matches[0][2])}
 		i++
 
-		machines = append(machines, ClawMachine{buttonA: buttonA, buttonB: buttonB, prize: prize})
+		machines = append(machines, ClawMachine{a: a, b: b, prize: prize})
 	}
 
 	return machines, nil
