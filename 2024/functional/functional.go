@@ -36,7 +36,7 @@ func MustTransform[T any, TFrom any](splice []TFrom, transform func(value TFrom)
 }
 
 func Transform[T any, TFrom any](splice []TFrom, transform func(value TFrom) (T, error)) ([]T, error) {
-	transformed := []T{}
+	transformed := make([]T, 0, len(splice))
 	var err error
 
 	for _, el := range splice {
