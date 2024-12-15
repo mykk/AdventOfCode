@@ -99,4 +99,31 @@ func Test(t *testing.T) {
 		assert.Equal(t, expected, perimeter)
 	})
 
+	t.Run("PerimeterTest8", func(t *testing.T) {
+		const PERIMETER_DATA string = `AAAA`
+
+		perimeter := WalkPerimeter(Point{3, 0}, [][]byte{[]byte(PERIMETER_DATA)})
+
+		assert.Equal(t, []Point{{0, 0}, {4, 0}, {4, 1}, {0, 1}, {0, 0}}, perimeter)
+	})
+
+	t.Run("PerimeterTest9", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("A    "))
+		testData = append(testData, []byte("AAAAA"))
+
+		perimeter := WalkPerimeter(Point{3, 1}, testData)
+
+		assert.Equal(t, []Point{{1, 1}, {5, 1}, {5, 2}, {0, 2}, {0, 0}, {1, 0}, {1, 1}}, perimeter)
+	})
+
+	t.Run("PerimeterTest10", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("A    "))
+		testData = append(testData, []byte(" AAAA"))
+
+		perimeter := WalkPerimeter(Point{3, 1}, testData)
+
+		assert.Equal(t, []Point{{1, 1}, {5, 1}, {5, 2}, {1, 2}, {1, 1}}, perimeter)
+	})
 }
