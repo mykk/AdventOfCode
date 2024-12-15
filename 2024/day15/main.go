@@ -23,7 +23,7 @@ type DoubleBoxEnd struct{}
 type Wall struct{}
 type Empty struct{}
 
-func moveDoubleBoxVertically(warehouse map[Point]interface{}, robot Point, dir Direction) Point {
+func moveDoubleBoxHorizontally(warehouse map[Point]interface{}, robot Point, dir Direction) Point {
 	firstBox := Point{x: robot.x + dir.dx, y: robot.y}
 	currentPos := firstBox
 
@@ -53,12 +53,12 @@ func moveDoubleBoxVertically(warehouse map[Point]interface{}, robot Point, dir D
 		case Wall:
 			return robot
 		default:
-			panic("unexpected object type in warehouse")
+			panic("unexpected warehouse object")
 		}
 	}
 }
 
-func getDoubleBoxStartEndInHorizontalDir(warehouse map[Point]interface{}, point Point, dir Direction) (Point, Point) {
+func getDoubleBoxStartEndInVerticalDir(warehouse map[Point]interface{}, point Point, dir Direction) (Point, Point) {
 	if _, ok := warehouse[Point{x: point.x, y: point.y + dir.dy}].(DoubleBoxStart); ok {
 		return Point{x: point.x, y: point.y + dir.dy}, Point{x: point.x + 1, y: point.y + dir.dy}
 	}
@@ -66,16 +66,16 @@ func getDoubleBoxStartEndInHorizontalDir(warehouse map[Point]interface{}, point 
 		return Point{x: point.x - 1, y: point.y + dir.dy}, Point{x: point.x, y: point.y + dir.dy}
 	}
 
-	panic("wrong box type!")
+	panic("wrong box type")
 }
 
-func doubleBoxMovableHorizontally(warehouse map[Point]interface{}, start, end Point, dir Direction) bool {
+func doubleBoxMovableVertically(warehouse map[Point]interface{}, start, end Point, dir Direction) bool {
 	for _, point := range []Point{start, end} {
 		switch warehouse[Point{x: point.x, y: point.y + dir.dy}].(type) {
 		case DoubleBoxStart, DoubleBoxEnd:
 			{
-				nextStart, nextEnd := getDoubleBoxStartEndInHorizontalDir(warehouse, point, dir)
-				if !doubleBoxMovableHorizontally(warehouse, nextStart, nextEnd, dir) {
+				nextStart, nextEnd := getDoubleBoxStartEndInVerticalDir(warehouse, point, dir)
+				if !doubleBoxMovableVertically(warehouse, nextStart, nextEnd, dir) {
 					return false
 				}
 			}
@@ -86,8 +86,8 @@ func doubleBoxMovableHorizontally(warehouse map[Point]interface{}, start, end Po
 	return true
 }
 
-func moveDoubleBoxHorizontally(warehouse map[Point]interface{}, point Point, dir Direction) {
-	start, end := getDoubleBoxStartEndInHorizontalDir(warehouse, point, dir)
+func moveDoubleBoxVertically(warehouse map[Point]interface{}, point Point, dir Direction) {
+	start, end := getDoubleBoxStartEndInVerticalDir(warehouse, point, dir)
 
 	for _, currentPoint := range []Point{start, end} {
 		nextPoint := Point{x: currentPoint.x, y: currentPoint.y + dir.dy}
@@ -100,55 +100,23 @@ func moveDoubleBoxHorizontally(warehouse map[Point]interface{}, point Point, dir
 			}
 		case DoubleBoxStart, DoubleBoxEnd:
 			{
-				moveDoubleBoxHorizontally(warehouse, currentPoint, dir)
+				moveDoubleBoxVertically(warehouse, currentPoint, dir)
 				warehouse[nextPoint] = warehouse[currentPoint]
 				warehouse[currentPoint] = Empty{}
 			}
 		default:
-			panic("unexpected object")
+			panic("unexpected warehouse object")
 		}
 	}
 }
 
-func printMap(warehouse map[Point]interface{}) {
-	for y := 0; y < 100; y++ {
-		for x := 0; x < 200; x++ {
-			switch warehouse[Point{x: x, y: y}].(type) {
-			case Empty:
-				{
-					fmt.Print(".")
-				}
-			case DoubleBoxStart:
-				{
-					fmt.Print("[")
-				}
-			case DoubleBoxEnd:
-				{
-					fmt.Print("]")
-
-				}
-			case Wall:
-				{
-					fmt.Print("#")
-				}
-			default:
-				break
-			}
-		}
-		fmt.Println()
-		if _, ok := warehouse[Point{x: 0, y: y}]; !ok {
-			break
-		}
-	}
-}
-func tryMoveDoubleBoxHorizontally(warehouse map[Point]interface{}, robot Point, dir Direction) Point {
-	start, end := getDoubleBoxStartEndInHorizontalDir(warehouse, robot, dir)
-	if !doubleBoxMovableHorizontally(warehouse, start, end, dir) {
+func tryMoveDoubleBoxVertically(warehouse map[Point]interface{}, robot Point, dir Direction) Point {
+	start, end := getDoubleBoxStartEndInVerticalDir(warehouse, robot, dir)
+	if !doubleBoxMovableVertically(warehouse, start, end, dir) {
 		return robot
 	}
 
-	moveDoubleBoxHorizontally(warehouse, robot, dir)
-	printMap(warehouse)
+	moveDoubleBoxVertically(warehouse, robot, dir)
 	return Point{x: robot.x, y: robot.y + dir.dy}
 }
 
@@ -157,12 +125,10 @@ func moveDoubleBox(warehouse map[Point]interface{}, robot Point, dir Direction) 
 	right := Direction{dx: -1, dy: 0}
 
 	if dir == left || dir == right {
-		result := moveDoubleBoxVertically(warehouse, robot, dir)
-		printMap(warehouse)
-		return result
+		return moveDoubleBoxHorizontally(warehouse, robot, dir)
 	}
 
-	return tryMoveDoubleBoxHorizontally(warehouse, robot, dir)
+	return tryMoveDoubleBoxVertically(warehouse, robot, dir)
 }
 
 func moveBox(warehouse map[Point]interface{}, robot Point, dir Direction) Point {
@@ -182,7 +148,7 @@ func moveBox(warehouse map[Point]interface{}, robot Point, dir Direction) Point 
 		case Wall:
 			return robot
 		default:
-			panic("unexpected warehouse unit type")
+			panic("unexpected warehouse object")
 		}
 	}
 }
@@ -190,10 +156,8 @@ func moveBox(warehouse map[Point]interface{}, robot Point, dir Direction) Point 
 func countGps(warehouse map[Point]interface{}) int {
 	gps := 0
 	for point, object := range warehouse {
-		if _, ok := object.(Box); ok {
-			gps += point.x + point.y*100
-		}
-		if _, ok := object.(DoubleBoxStart); ok {
+		switch object.(type) {
+		case Box, DoubleBoxStart:
 			gps += point.x + point.y*100
 		}
 	}
@@ -214,7 +178,7 @@ func MoveRobot(warehouse map[Point]interface{}, robot Point, directions []Direct
 		case DoubleBoxStart, DoubleBoxEnd:
 			robot = moveDoubleBox(warehouse, robot, dir)
 		default:
-			panic("unexpected warehouse unit type")
+			panic("unexpected warehouse object")
 		}
 	}
 
@@ -293,12 +257,9 @@ func main() {
 		fmt.Printf("Error parsing input data: %v\n", err)
 		return
 	}
-
 	fmt.Printf("Part 1: %d\n", MoveRobot(warehouse, robot, directions))
 
 	warehouse, robot, directions, err = ParseInputData(string(inputData), true)
-	printMap(warehouse)
-
 	if err != nil {
 		fmt.Printf("Error parsing input data: %v\n", err)
 		return
