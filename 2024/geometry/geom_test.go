@@ -1,6 +1,8 @@
 package aoc_geometry
 
 import (
+	fn "AoC/functional"
+
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -125,5 +127,100 @@ func Test(t *testing.T) {
 		perimeter := WalkPerimeter(Point{3, 1}, testData)
 
 		assert.Equal(t, []Point{{1, 1}, {5, 1}, {5, 2}, {1, 2}, {1, 1}}, perimeter)
+	})
+
+	t.Run("AreaTest1", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("AAAA"))
+		testData = append(testData, []byte("BBCD"))
+		testData = append(testData, []byte("BBCC"))
+		testData = append(testData, []byte("EEEC"))
+
+		areas := AreasFromGrid(testData)
+		assert.Equal(t, 5, len(areas))
+
+		assert.True(t, fn.All(areas, func(_ int, area Area) bool { return len(area.Holes) == 0 }))
+		assert.True(t, fn.All(areas, func(_ int, area Area) bool {
+			if area.id == 'A' {
+				return len(area.Area) == 4
+			}
+
+			if area.id == 'B' {
+				return len(area.Area) == 4
+			}
+
+			if area.id == 'C' {
+				return len(area.Area) == 4
+			}
+
+			if area.id == 'D' {
+				return len(area.Area) == 1
+			}
+
+			if area.id == 'E' {
+				return len(area.Area) == 3
+			}
+
+			return false
+		}))
+	})
+
+	t.Run("AreaTest2", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("OOOOO"))
+		testData = append(testData, []byte("OXOXO"))
+		testData = append(testData, []byte("OOOOO"))
+		testData = append(testData, []byte("OXOXO"))
+		testData = append(testData, []byte("OOOOO"))
+
+		areas := AreasFromGrid(testData)
+		assert.Equal(t, 1, len(areas))
+		assert.Equal(t, 1, len(areas[0].Holes))
+
+		assert.True(t, fn.All(areas[0].Holes, func(_ int, hole Hole) bool {
+			return len(hole.Area) == 1 && len(hole.Perimeter) == 5
+		}))
+	})
+
+	t.Run("AreaTest3", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("OOOOO"))
+		testData = append(testData, []byte("OXXXO"))
+		testData = append(testData, []byte("OOOOO"))
+		testData = append(testData, []byte("OOOOO"))
+		testData = append(testData, []byte("OOOBB"))
+
+		areas := AreasFromGrid(testData)
+		assert.Equal(t, 2, len(areas))
+		assert.True(t, fn.All(areas, func(_ int, area Area) bool {
+			if area.id == 'O' && len(area.Holes) != 1 {
+				return false
+			}
+
+			if area.id == 'O' {
+				return len(area.Holes[0].Area) == 3
+			}
+
+			if area.id == 'B' {
+				return len(area.Holes) == 0
+			}
+
+			return false
+		}))
+	})
+
+	t.Run("AreaTest4", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("OOOOO"))
+		testData = append(testData, []byte("OXXXX"))
+		testData = append(testData, []byte("OOOOO"))
+		testData = append(testData, []byte("OOOOO"))
+		testData = append(testData, []byte("OOOBB"))
+
+		areas := AreasFromGrid(testData)
+		assert.Equal(t, 3, len(areas))
+		assert.True(t, fn.All(areas, func(_ int, area Area) bool {
+			return len(area.Holes) == 0
+		}))
 	})
 }
