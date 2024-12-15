@@ -1,5 +1,7 @@
 package aoc_geometry
 
+import "errors"
+
 type Point struct {
 	x, y int
 }
@@ -180,8 +182,36 @@ func walkArea(id byte, point Point, grid [][]byte, area Set[Point]) Set[Point] {
 	return area
 }
 
-func walkHole(id byte, point Point, grid [][]byte, area Set[Point], ignoreHolePoints Set[Point]) (Hole, error) {
-	return Hole{}, nil
+func walkHole(id byte, point Point, grid [][]byte, area Set[Point], holeArea, ignoreHolePoints Set[Point]) error {
+	directions := []Direction{{-1, 0}, {1, 0}, {0, 1}, {0, -1}}
+	diagonalDirections := []Direction{{-1, -1}, {1, 1}, {-1, 1}, {1, -1}}
+
+	holeArea.Add(point)
+	ignoreHolePoints.Add(point)
+
+	for _, diagonalDirection := range diagonalDirections {
+		diagonalPoint := Point{point.x + diagonalDirection.dx, point.y + diagonalDirection.dy}
+		if grid[diagonalPoint.y][diagonalPoint.x] != id && !area.Contains(diagonalPoint) {
+			return errors.New("not a hole")
+		}
+	}
+
+	for _, direction := range directions {
+		nextPoint := Point{point.x + direction.dx, point.y + direction.dy}
+		if !WithinBounds(grid, nextPoint) {
+			continue
+		}
+
+		if grid[nextPoint.y][nextPoint.x] != id && !area.Contains(nextPoint) {
+			return errors.New("not a hole")
+		}
+
+		if err := walkHole(id, nextPoint, grid, area, holeArea, ignoreHolePoints); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func collectHoles(id byte, point Point, grid [][]byte, area Set[Point], walked Set[Point], holes []Hole, ignoreHolePoints Set[Point]) []Hole {
@@ -199,8 +229,10 @@ func collectHoles(id byte, point Point, grid [][]byte, area Set[Point], walked S
 		if grid[nextPoint.y][nextPoint.x] == id {
 			collectHoles(id, nextPoint, grid, area, walked, holes, ignoreHolePoints)
 		} else if !ignoreHolePoints.Contains(nextPoint) {
-			if hole, err := walkHole(grid[nextPoint.y][nextPoint.x], nextPoint, grid, area, ignoreHolePoints); err == nil {
-				holes = append(holes, hole)
+			holeArea := make(Set[Point])
+			if err := walkHole(grid[nextPoint.y][nextPoint.x], nextPoint, grid, area, holeArea, ignoreHolePoints); err == nil {
+				holePerimeter := WalkPerimeter(nextPoint, grid)
+				holes = append(holes, Hole{id: grid[nextPoint.y][nextPoint.x], Area: holeArea, Perimeter: holePerimeter})
 			}
 		}
 	}
