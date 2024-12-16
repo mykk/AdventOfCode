@@ -150,6 +150,29 @@ func Test(t *testing.T) {
 		assert.Equal(t, []Point{{2, 1}, {6, 1}, {6, 2}, {2, 2}, {0, 1}}, perimeter)
 	})
 
+	t.Run("PerimeterTest12", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("A"))
+		testData = append(testData, []byte("A"))
+		testData = append(testData, []byte("A"))
+
+		perimeter := WalkPerimeter(Point{1, 1}, testData)
+
+		assert.Equal(t, []Point{{0, 0}, {1, 0}, {1, 3}, {0, 3}, {0, 0}}, perimeter)
+	})
+
+	t.Run("PerimeterTest12", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte(" A"))
+		testData = append(testData, []byte("A "))
+		testData = append(testData, []byte("A "))
+		testData = append(testData, []byte("A "))
+
+		perimeter := WalkPerimeter(Point{0, 2}, testData)
+
+		assert.Equal(t, []Point{{0, 1}, {1, 1}, {1, 4}, {0, 4}, {0, 1}}, perimeter)
+	})
+
 	t.Run("AreaTest1", func(t *testing.T) {
 		testData := [][]byte{}
 		testData = append(testData, []byte("AAAA"))
