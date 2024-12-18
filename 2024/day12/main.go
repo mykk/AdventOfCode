@@ -17,18 +17,20 @@ func AbsInt(n int) int {
 func getPerimeter(polygon []geom.Point) int {
 	return fn.Reduce(polygon[:len(polygon)-1], 0, func(i, perimeter int, point geom.Point) int {
 		nextPoint := polygon[i+1]
-		return perimeter + AbsInt(AbsInt(point.X)-AbsInt(nextPoint.X)) + AbsInt(AbsInt(point.Y)-AbsInt(nextPoint.Y))
+		return perimeter + AbsInt(point.X-nextPoint.X) + AbsInt(point.Y-nextPoint.Y)
 	})
 }
 
 func getTotalPerimeter(area geom.Area) int {
-	return getPerimeter(area.Perimeter) + fn.Reduce(area.Holes, 0, func(_, price int, hole geom.Hole) int { return getPerimeter(hole.Perimeter) })
+	return getPerimeter(area.Perimeter) + fn.Reduce(area.Holes, 0, func(_, perimeter int, hole geom.Hole) int { return perimeter + getPerimeter(hole.Perimeter) })
 }
 
 func CalculatePrice(areas []geom.Area) int {
 	return fn.Reduce(areas, 0, func(_, price int, area geom.Area) int {
 		perimeter := getTotalPerimeter(area)
-		return price + len(area.Area)*perimeter
+		return price + len(area.Area)*perimeter + fn.Reduce(area.Holes, 0, func(_, holePrice int, hole geom.Hole) int {
+			return holePrice + len(hole.Area)*getPerimeter(hole.Perimeter)
+		})
 	})
 }
 
@@ -51,5 +53,4 @@ func main() {
 	}
 
 	fmt.Printf("Part 1: %d\n", CalculatePrice(areas))
-	//fmt.Printf("Part 2: %d\n", CountPlutonianPebbles(stones, 75))
 }
