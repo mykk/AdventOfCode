@@ -55,17 +55,15 @@ func (EastWalker) Walk(grid [][]byte, id byte, startPoint Point) (endPoint Point
 	currentPoint := startPoint
 
 	for {
-		if currentPoint.Y > 0 && grid[currentPoint.Y-1][currentPoint.X] == id {
-			return currentPoint, NorthWalker{}
-		}
-
-		if len(grid[currentPoint.Y])-1 > currentPoint.X && grid[currentPoint.Y][currentPoint.X+1] == id {
+		if currentPoint.X == len(grid[currentPoint.Y])-1 || grid[currentPoint.Y][currentPoint.X+1] != id {
 			currentPoint.X++
-			continue
+			return currentPoint, SouthWalker{}
 		}
 
 		currentPoint.X++
-		return currentPoint, SouthWalker{}
+		if currentPoint.Y > 0 && grid[currentPoint.Y-1][currentPoint.X] == id {
+			return currentPoint, NorthWalker{}
+		}
 	}
 }
 
@@ -77,16 +75,15 @@ func (WestWalker) Walk(grid [][]byte, id byte, startPoint Point) (endPoint Point
 	currentPoint := startPoint
 
 	for {
-		if currentPoint.X > 0 && len(grid)-1 > currentPoint.Y && grid[currentPoint.Y][currentPoint.X-1] == id {
+		currentPoint.X--
+
+		if currentPoint.X == 0 || grid[currentPoint.Y-1][currentPoint.X-1] != id {
+			return currentPoint, NorthWalker{}
+		}
+
+		if currentPoint.X != 0 && currentPoint.Y < len(grid) && grid[currentPoint.Y][currentPoint.X-1] == id {
 			return currentPoint, SouthWalker{}
 		}
-
-		if currentPoint.X > 0 && grid[currentPoint.Y-1][currentPoint.X-1] == id {
-			currentPoint.X--
-			continue
-		}
-
-		return currentPoint, NorthWalker{}
 	}
 }
 
@@ -98,15 +95,14 @@ func (NorthWalker) Walk(grid [][]byte, id byte, startPoint Point) (endPoint Poin
 	currentPoint := startPoint
 
 	for {
+		if currentPoint.Y == 0 || grid[currentPoint.Y-1][currentPoint.X] != id {
+			return currentPoint, EastWalker{}
+		}
+
+		currentPoint.Y--
 		if currentPoint.Y > 0 && currentPoint.X > 0 && grid[currentPoint.Y-1][currentPoint.X-1] == id {
 			return currentPoint, WestWalker{}
 		}
-
-		if currentPoint.Y > 0 && grid[currentPoint.Y-1][currentPoint.X] == id {
-			currentPoint.Y--
-			continue
-		}
-		return currentPoint, EastWalker{}
 	}
 }
 
@@ -118,40 +114,33 @@ func (SouthWalker) Walk(grid [][]byte, id byte, startPoint Point) (endPoint Poin
 	currentPoint := startPoint
 
 	for {
-		if len(grid) > currentPoint.Y && len(grid[currentPoint.Y]) > currentPoint.X && grid[currentPoint.Y][currentPoint.X] == id {
-			return currentPoint, EastWalker{}
+		currentPoint.Y++
+
+		if currentPoint.Y == len(grid) || grid[currentPoint.Y][currentPoint.X-1] != id {
+			return currentPoint, WestWalker{}
 		}
 
-		if currentPoint.X > 0 && len(grid) > currentPoint.Y && grid[currentPoint.Y][currentPoint.X-1] == id {
-			currentPoint.Y++
-			continue
+		if currentPoint.Y < len(grid) && currentPoint.X < len(grid[currentPoint.Y]) && grid[currentPoint.Y][currentPoint.X] == id {
+			return currentPoint, EastWalker{}
 		}
-		return currentPoint, WestWalker{}
 	}
 }
 
-func walkToEastStart(startPoint Point, grid [][]byte) Point {
-	currentPoint := startPoint
-	id := grid[startPoint.Y][startPoint.X]
-
-	for currentPoint.X > 0 {
-		if currentPoint.Y > 0 && grid[currentPoint.Y-1][currentPoint.X-1] == id {
-			return currentPoint
+func walkToEastStart(id byte, startPoint Point, grid [][]byte) Point {
+	area := walkArea(id, startPoint, grid, make(Set[Point]))
+	for point := range area {
+		if point.Y < startPoint.Y || point.Y == startPoint.Y && point.X < startPoint.X {
+			startPoint = point
 		}
-
-		if grid[currentPoint.Y][currentPoint.X-1] != id {
-			return currentPoint
-		}
-		currentPoint.X--
 	}
-	return currentPoint
+	return startPoint
 }
 
 func WalkPerimeter(startPoint Point, grid [][]byte) (perimeter []Point) {
 	id := grid[startPoint.Y][startPoint.X]
 
 	var currentWalker PerimeterWalker = EastWalker{}
-	startPoint = walkToEastStart(startPoint, grid)
+	startPoint = walkToEastStart(id, startPoint, grid)
 
 	currentPoint, currentWalker := currentWalker.Walk(grid, id, startPoint)
 	perimeter = append(perimeter, startPoint)

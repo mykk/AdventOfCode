@@ -24,7 +24,7 @@ func Test(t *testing.T) {
 
 		perimeter := WalkPerimeter(Point{0, 1}, testData)
 
-		assert.Equal(t, []Point{{0, 1}, {1, 1}, {1, 0}, {2, 0}, {2, 1}, {3, 1}, {3, 2}, {0, 2}, {0, 1}}, perimeter)
+		assert.Equal(t, []Point{{1, 0}, {2, 0}, {2, 1}, {3, 1}, {3, 2}, {0, 2}, {0, 1}, {1, 1}, {1, 0}}, perimeter)
 	})
 
 	t.Run("PerimeterTest3", func(t *testing.T) {
@@ -116,7 +116,7 @@ func Test(t *testing.T) {
 
 		perimeter := WalkPerimeter(Point{3, 1}, testData)
 
-		assert.Equal(t, []Point{{1, 1}, {5, 1}, {5, 2}, {0, 2}, {0, 0}, {1, 0}, {1, 1}}, perimeter)
+		assert.Equal(t, []Point{{0, 0}, {1, 0}, {1, 1}, {5, 1}, {5, 2}, {0, 2}, {0, 0}}, perimeter)
 	})
 
 	t.Run("PerimeterTest10", func(t *testing.T) {
@@ -139,29 +139,67 @@ func Test(t *testing.T) {
 		assert.Equal(t, []Point{{0, 1}, {4, 1}, {4, 2}, {0, 2}, {0, 1}}, perimeter)
 	})
 
-	t.Run("PerimeterTest12", func(t *testing.T) {
+	t.Run("PerimeterTest12_1", func(t *testing.T) {
 		testData := [][]byte{}
 		testData = append(testData, []byte("AA    AA"))
 		testData = append(testData, []byte("  AAAA  "))
 		testData = append(testData, []byte("AA    AA"))
 
-		perimeter := WalkPerimeter(Point{1, 1}, testData)
+		perimeter := WalkPerimeter(Point{2, 1}, testData)
 
-		assert.Equal(t, []Point{{2, 1}, {6, 1}, {6, 2}, {2, 2}, {0, 1}}, perimeter)
+		assert.Equal(t, []Point{{2, 1}, {6, 1}, {6, 2}, {2, 2}, {2, 1}}, perimeter)
 	})
 
-	t.Run("PerimeterTest12", func(t *testing.T) {
+	t.Run("PerimeterTest12_2", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("AA    AA"))
+		testData = append(testData, []byte("  A   AA"))
+		testData = append(testData, []byte("  AAAA  "))
+		testData = append(testData, []byte("AA    AA"))
+
+		perimeter := WalkPerimeter(Point{2, 1}, testData)
+
+		assert.Equal(t, []Point{{2, 1}, {3, 1}, {3, 2}, {6, 2}, {6, 3}, {2, 3}, {2, 1}}, perimeter)
+	})
+
+	t.Run("PerimeterTest12_3", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("AA    AA"))
+		testData = append(testData, []byte("  A   AA"))
+		testData = append(testData, []byte("  AAAA  "))
+		testData = append(testData, []byte("AA   A  "))
+		testData = append(testData, []byte("AA    AA"))
+
+		perimeter := WalkPerimeter(Point{2, 1}, testData)
+
+		assert.Equal(t, []Point{{2, 1}, {3, 1}, {3, 2}, {6, 2}, {6, 4}, {5, 4}, {5, 3}, {2, 3}, {2, 1}}, perimeter)
+	})
+
+	t.Run("PerimeterTest12_4", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("AA    AA"))
+		testData = append(testData, []byte("  A   AA"))
+		testData = append(testData, []byte("  AAAA  "))
+		testData = append(testData, []byte("AA   A  "))
+		testData = append(testData, []byte("AA   AAA"))
+
+		perimeter := WalkPerimeter(Point{2, 1}, testData)
+
+		assert.Equal(t, []Point{{2, 1}, {3, 1}, {3, 2}, {6, 2}, {6, 4}, {8, 4}, {8, 5}, {5, 5}, {5, 3}, {2, 3}, {2, 1}}, perimeter)
+	})
+
+	t.Run("PerimeterTest12_5", func(t *testing.T) {
 		testData := [][]byte{}
 		testData = append(testData, []byte("A"))
 		testData = append(testData, []byte("A"))
 		testData = append(testData, []byte("A"))
 
-		perimeter := WalkPerimeter(Point{1, 1}, testData)
+		perimeter := WalkPerimeter(Point{0, 2}, testData)
 
 		assert.Equal(t, []Point{{0, 0}, {1, 0}, {1, 3}, {0, 3}, {0, 0}}, perimeter)
 	})
 
-	t.Run("PerimeterTest12", func(t *testing.T) {
+	t.Run("PerimeterTest12_6", func(t *testing.T) {
 		testData := [][]byte{}
 		testData = append(testData, []byte(" A"))
 		testData = append(testData, []byte("A "))
@@ -219,7 +257,7 @@ func Test(t *testing.T) {
 
 		areas := AreasFromGrid(testData)
 		assert.Equal(t, 1, len(areas))
-		assert.Equal(t, 1, len(areas[0].Holes))
+		assert.Equal(t, 4, len(areas[0].Holes))
 
 		assert.True(t, fn.All(areas[0].Holes, func(_ int, hole Hole) bool {
 			return len(hole.Area) == 1 && len(hole.Perimeter) == 5
