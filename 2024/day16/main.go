@@ -48,7 +48,6 @@ func SolveMaze(grid [][]byte, start, end Point) (winningPaths []State) {
 
 	for states.Len() != 0 {
 		state := states.PopItem()
-		visited.Add(PointAndDir{position: state.position, direction: state.direction})
 
 		if len(winningPaths) != 0 && winningPaths[0].points < state.points {
 			return
@@ -74,6 +73,8 @@ func SolveMaze(grid [][]byte, start, end Point) (winningPaths []State) {
 			if !withinBounds(grid, position.x, position.y) || grid[position.y][position.x] == '#' {
 				continue
 			}
+
+			visited.Add(PointAndDir{position: state.position, direction: state.direction})
 
 			points := state.points
 			if direction == state.direction {
