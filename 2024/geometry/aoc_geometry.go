@@ -95,11 +95,12 @@ func (NorthWalker) Walk(grid [][]byte, id byte, startPoint Point) (endPoint Poin
 	currentPoint := startPoint
 
 	for {
+		currentPoint.Y--
+
 		if currentPoint.Y == 0 || grid[currentPoint.Y-1][currentPoint.X] != id {
 			return currentPoint, EastWalker{}
 		}
 
-		currentPoint.Y--
 		if currentPoint.Y > 0 && currentPoint.X > 0 && grid[currentPoint.Y-1][currentPoint.X-1] == id {
 			return currentPoint, WestWalker{}
 		}
