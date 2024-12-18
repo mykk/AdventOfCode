@@ -211,6 +211,18 @@ func Test(t *testing.T) {
 		assert.Equal(t, []Point{{0, 1}, {1, 1}, {1, 4}, {0, 4}, {0, 1}}, perimeter)
 	})
 
+	t.Run("PerimeterTest12_7", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte(" WW   "))
+		testData = append(testData, []byte("WWWW  "))
+		testData = append(testData, []byte("WWW W "))
+		testData = append(testData, []byte("WWWWW "))
+
+		perimeter := WalkPerimeter(Point{0, 2}, testData)
+
+		assert.Equal(t, []Point{{1, 0}, {3, 0}, {3, 1}, {4, 1}, {4, 2}, {3, 2}, {3, 3}, {4, 3}, {4, 2}, {5, 2}, {5, 4}, {0, 4}, {0, 1}, {1, 1}, {1, 0}}, perimeter)
+	})
+
 	t.Run("AreaTest1", func(t *testing.T) {
 		testData := [][]byte{}
 		testData = append(testData, []byte("AAAA"))
