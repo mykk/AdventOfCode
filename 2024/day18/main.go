@@ -44,7 +44,6 @@ func FindPath(fallingBits []Point, limit int, start, end Point) (int, error) {
 	visited := make(aoc.Set[Point])
 
 	states.PushItem(State{position: start, distance: 0})
-	visited.Add(start)
 
 	for states.Len() != 0 {
 		state := states.PopItem()
@@ -53,8 +52,14 @@ func FindPath(fallingBits []Point, limit int, start, end Point) (int, error) {
 			return state.distance, nil
 		}
 
+		if visited.Contains(state.position) {
+			continue
+		}
+		visited.Add(state.position)
+
 		for _, direction := range Directions {
 			position := Point{x: state.position.x + direction.dx, y: state.position.y + direction.dy}
+
 			if visited.Contains(position) {
 				continue
 			}
@@ -63,7 +68,6 @@ func FindPath(fallingBits []Point, limit int, start, end Point) (int, error) {
 				continue
 			}
 
-			visited.Add(position)
 			heap.Push(states, State{position: position, distance: state.distance + 1})
 		}
 	}
