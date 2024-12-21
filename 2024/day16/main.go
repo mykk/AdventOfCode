@@ -42,7 +42,7 @@ func withinBounds(grid [][]byte, x, y int) bool {
 
 func SolveMaze(grid [][]byte, start, end Point) (winningPaths []State) {
 	states := aoc.NewHeap[State](func(a, b State) bool { return a.points < b.points })
-	visited := make(aoc.Set[PointAndDir])
+	visited := make(map[PointAndDir]int)
 
 	states.PushItem(State{PointAndDir: PointAndDir{position: start, direction: Direction{dx: 1, dy: 0}}, points: 0, path: aoc.NewSet(start)})
 
@@ -52,6 +52,11 @@ func SolveMaze(grid [][]byte, start, end Point) (winningPaths []State) {
 		if len(winningPaths) != 0 && winningPaths[0].points < state.points {
 			return
 		}
+
+		if previousPoints, found := visited[state.PointAndDir]; found && previousPoints < state.points {
+			continue
+		}
+		visited[state.PointAndDir] = state.points
 
 		if state.position == end {
 			winningPaths = append(winningPaths, state)
@@ -64,17 +69,15 @@ func SolveMaze(grid [][]byte, start, end Point) (winningPaths []State) {
 			if direction == reverseDir {
 				continue
 			}
-
 			position := Point{x: state.position.x + direction.dx, y: state.position.y + direction.dy}
-			if visited.Contains(PointAndDir{position: position, direction: direction}) {
+
+			if previousPoints, found := visited[PointAndDir{position: position, direction: direction}]; found && previousPoints < state.points+1 {
 				continue
 			}
 
 			if !withinBounds(grid, position.x, position.y) || grid[position.y][position.x] == '#' {
 				continue
 			}
-
-			visited.Add(PointAndDir{position: state.position, direction: state.direction})
 
 			points := state.points
 			if direction == state.direction {
