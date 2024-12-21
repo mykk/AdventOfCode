@@ -41,10 +41,13 @@ func FindPath(grid [][]byte, start, end Point) State {
 	visited := make(aoc.Set[Point])
 
 	states.PushItem(State{position: start, duration: 0, path: []Point{start}, positionDurations: map[Point]int{start: 0}})
-	visited.Add(start)
 
 	for states.Len() != 0 {
 		state := states.PopItem()
+		if visited.Contains(state.position) {
+			continue
+		}
+		visited.Add(state.position)
 
 		if state.position == end {
 			return state
@@ -59,7 +62,6 @@ func FindPath(grid [][]byte, start, end Point) State {
 			if !withinBounds(grid, position.x, position.y) || grid[position.y][position.x] == '#' {
 				continue
 			}
-			visited.Add(position)
 
 			positionDurations := make(map[Point]int, len(state.positionDurations))
 			for key, value := range state.positionDurations {
@@ -76,26 +78,50 @@ func FindPath(grid [][]byte, start, end Point) State {
 	panic("no path found")
 }
 
-func FindCheatPaths(grid [][]byte, state State, atLeast int) (cheats int) {
-	for duration, point := range state.path {
-		for _, direction := range Directions {
-			position := Point{x: point.x + direction.dx, y: point.y + direction.dy}
-			if grid[position.y][position.x] != '#' {
+type CheatState struct {
+	position Point
+	duration int
+}
+
+func FindCheatPaths(grid [][]byte, finalState State, savesAtLeast, cheatDuration int) (cheats int) {
+	if len(finalState.path) < savesAtLeast {
+		return
+	}
+
+	for duration, point := range finalState.path[:len(finalState.path)-savesAtLeast] {
+		states := aoc.NewHeap[CheatState](func(a, b CheatState) bool { return a.duration < b.duration })
+		visited := make(aoc.Set[Point])
+
+		states.PushItem(CheatState{position: point, duration: 0})
+
+		for states.Len() != 0 {
+			state := states.PopItem()
+			if visited.Contains(state.position) {
 				continue
 			}
-			for _, cheatDir := range Directions {
-				cheatPosition := Point{x: position.x + cheatDir.dx, y: position.y + cheatDir.dy}
-				if originalDuration, found := state.positionDurations[cheatPosition]; found && originalDuration-(duration+2) >= atLeast {
-					cheats += 1
+			visited.Add(state.position)
+
+			if original, found := finalState.positionDurations[state.position]; found && original-(duration+state.duration) >= savesAtLeast {
+				cheats++
+			}
+			if state.duration == cheatDuration {
+				continue
+			}
+
+			for _, dir := range Directions {
+				position := Point{x: state.position.x + dir.dx, y: state.position.y + dir.dy}
+				if visited.Contains(position) {
+					continue
 				}
+				states.PushItem(CheatState{position: position, duration: state.duration + 1})
 			}
 		}
 	}
 	return
 }
 
-func CountCheats(grid [][]byte, start, end Point, atLeast int) int {
-	return FindCheatPaths(grid, FindPath(grid, start, end), atLeast)
+func CountCheats(grid [][]byte, start, end Point, savesAtLeast, cheatDuration int) int {
+	return FindCheatPaths(grid, FindPath(grid, start, end), savesAtLeast, cheatDuration)
 }
 
 func ParseInputData(data string) (grid [][]byte, start, end Point, err error) {
@@ -135,5 +161,6 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Part 1: %d\n", CountCheats(grid, start, end, 100))
+	fmt.Printf("Part 1: %d\n", CountCheats(grid, start, end, 100, 2))
+	fmt.Printf("Part 2: %d\n", CountCheats(grid, start, end, 100, 20))
 }
