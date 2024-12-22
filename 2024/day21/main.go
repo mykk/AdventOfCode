@@ -156,26 +156,75 @@ func typeInKeypadInstructions(code []byte, pathMap map[BytePair][][]byte, limit 
 	return instructions
 }
 
-// func calculateFinalLen(directionalInstructions []byte, robotCount int) {
-
-// }
-func getCodeComplexity(code []byte, numpadPaths, directionalPaths map[BytePair][][]byte, robotCount int) int {
-	directions := typeInKeypadInstructions(code, numpadPaths, 2)
-
-	for i := 0; i < robotCount; i++ {
-		newDirections := make([][]byte, 0)
-		for _, direction := range directions {
-			newDirections = append(newDirections, typeInKeypadInstructions(direction, directionalPaths, 1)...)
+func getLenFromCache(instructions []byte, robotCount int, cache map[string]map[int]int) (int, bool) {
+	if robotCountToLenMap, found := cache[string(instructions)]; found {
+		if length, found := robotCountToLenMap[robotCount]; found {
+			return length, true
 		}
-		directions = newDirections
+	}
+	return 0, false
+}
+
+func calculateLen(instructions []byte, robotCount int, pathMap map[BytePair][][]byte, cache map[string]map[int]int) int {
+	if length, found := getLenFromCache(instructions, robotCount, cache); found {
+		return length
 	}
 
-	minLen := fn.Reduce(directions, len(directions[0]), func(_ int, minLen int, direction []byte) int {
-		if len(direction) < minLen {
-			return len(direction)
+	newInstructions := typeInKeypadInstructions(instructions, pathMap, 3)
+
+	for _, newInstruction := range newInstructions {
+		finalLen := calculateFinalLen(newInstruction, pathMap, robotCount-1, cache)
+
+		if length, found := getLenFromCache(instructions, robotCount, cache); found {
+			if finalLen < length {
+				cache[string(instructions)][robotCount] = finalLen
+			}
+		} else {
+			if robotCountToLenMap, found := cache[string(instructions)]; found {
+				robotCountToLenMap[robotCount] = finalLen
+			} else {
+				cache[string(instructions)] = make(map[int]int)
+				cache[string(instructions)][robotCount] = finalLen
+			}
 		}
-		return minLen
+	}
+
+	return cache[string(instructions)][robotCount]
+}
+
+func calculateFinalLen(directionalInstructions []byte, pathMap map[BytePair][][]byte, robotCount int, cache map[string]map[int]int) int {
+	if robotCount == 0 {
+		return len(directionalInstructions)
+	}
+
+	instructionSplits := make([][]byte, 0)
+
+	current := make([]byte, 0)
+	for _, cell := range directionalInstructions {
+		current = append(current, cell)
+		if cell == 'A' {
+			instructionSplits = append(instructionSplits, current)
+			current = make([]byte, 0)
+		}
+	}
+
+	return fn.Reduce(instructionSplits, 0, func(_, sum int, instruction []byte) int {
+		return sum + calculateLen(instruction, robotCount, pathMap, cache)
 	})
+}
+
+func getCodeComplexity(code []byte, numpadPaths, directionalPaths map[BytePair][][]byte, robotCount int) int {
+	instructions := typeInKeypadInstructions(code, numpadPaths, 2)
+
+	cache := make(map[string]map[int]int)
+
+	minLen := 0
+	for _, instruction := range instructions {
+		current := calculateFinalLen(instruction, directionalPaths, robotCount, cache)
+		if minLen == 0 || current < minLen {
+			minLen = current
+		}
+	}
 
 	codeNumber, _ := strconv.Atoi(string(code[:3]))
 	return minLen * codeNumber
@@ -210,4 +259,5 @@ func main() {
 	}
 
 	fmt.Printf("Part 1: %d\n", GetCodeSumComplexities(codes, 2))
+	fmt.Printf("Part 2: %d\n", GetCodeSumComplexities(codes, 25))
 }
