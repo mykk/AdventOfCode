@@ -64,6 +64,7 @@ func CountTConnections(network map[string][]string) (count int) {
 	}
 	return count
 }
+
 func getMaxClusterSize(network map[string][]string, cluster []string, seen aoc.Set[string]) []string {
 	currentAsStr := strings.Join(fn.Sorted(cluster, func(a, b string) bool { return a < b }), "")
 	if seen.Contains(currentAsStr) {
@@ -82,9 +83,7 @@ func getMaxClusterSize(network map[string][]string, cluster []string, seen aoc.S
 
 	maxCluster := cluster
 	for _, connection := range clusterConnections {
-		biggerCluster := make([]string, 0, len(cluster)+1)
-
-		current := getMaxClusterSize(network, append(append(biggerCluster, cluster...), connection), seen)
+		current := getMaxClusterSize(network, append(append(make([]string, 0, len(cluster)+1), cluster...), connection), seen)
 		if len(current) > len(maxCluster) {
 			maxCluster = current
 		}
