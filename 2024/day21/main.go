@@ -63,7 +63,6 @@ func findAllPaths(grid [][]byte, start, end byte) [][]byte {
 
 	finalStates := make([][]byte, 0)
 	states := aoc.NewHeap[State](func(a, b State) bool { return a.distance < b.distance })
-
 	states.PushItem(State{position: startPosition, distance: 0})
 
 	for states.Len() != 0 {
@@ -151,7 +150,6 @@ func typeInInstructions(code []byte, pathMap map[BytePair][][]byte) [][]byte {
 			for _, currentInstruction := range instructions {
 				newInstructions = append(newInstructions, append(append(append([]byte{}, currentInstruction...), path...), 'A'))
 			}
-
 		}
 		instructions = newInstructions
 	}
@@ -255,10 +253,6 @@ func main() {
 	}
 
 	codes := ParseInputData(string(inputData))
-	if err != nil {
-		fmt.Printf("Error parsing input data: %v\n", err)
-		return
-	}
 
 	fmt.Printf("Part 1: %d\n", GetCodeSumComplexities(codes, 2))
 	fmt.Printf("Part 2: %d\n", GetCodeSumComplexities(codes, 25))
