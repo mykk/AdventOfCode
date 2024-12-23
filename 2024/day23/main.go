@@ -26,7 +26,7 @@ func setToSplice(set aoc.Set[string]) []string {
 	return splice
 }
 
-func intersect(splice1, splice2 []string) aoc.Set[string] {
+func intersect(splice1, splice2 []string) []string {
 	set1, set2 := spliceToSet(splice1), spliceToSet(splice2)
 
 	set := make(aoc.Set[string])
@@ -37,7 +37,7 @@ func intersect(splice1, splice2 []string) aoc.Set[string] {
 		}
 	}
 
-	return set
+	return setToSplice(set)
 }
 
 func CountTConnections(network map[string][]string) (count int) {
@@ -48,27 +48,22 @@ func CountTConnections(network map[string][]string) (count int) {
 			continue
 		}
 
-		used := make(aoc.Set[string])
+		usedCurrent := make(aoc.Set[string])
 		for _, connected := range connections {
 			if usedGlobal.Contains(connected) {
 				continue
 			}
 
-			interConnections := intersect(connections, network[connected])
+			count += fn.CountIf(intersect(connections, network[connected]), func(interConnected string) bool {
+				return !usedCurrent.Contains(interConnected) && !usedGlobal.Contains(interConnected)
+			})
 
-			for interConnected := range interConnections {
-				if !used.Contains(interConnected) && !usedGlobal.Contains(interConnected) {
-					count += 1
-				}
-			}
-
-			used.Add(connected)
+			usedCurrent.Add(connected)
 		}
 		usedGlobal.Add(computer)
 	}
 	return count
 }
-
 func getMaxClusterSize(network map[string][]string, cluster []string, seen aoc.Set[string]) []string {
 	currentAsStr := strings.Join(fn.Sorted(cluster, func(a, b string) bool { return a < b }), "")
 	if seen.Contains(currentAsStr) {
@@ -78,7 +73,7 @@ func getMaxClusterSize(network map[string][]string, cluster []string, seen aoc.S
 
 	clusterConnections := network[cluster[0]]
 	for _, clusterNode := range cluster[1:] {
-		clusterConnections = setToSplice(intersect(clusterConnections, network[clusterNode]))
+		clusterConnections = intersect(clusterConnections, network[clusterNode])
 	}
 
 	if len(clusterConnections) == 0 {
@@ -98,7 +93,7 @@ func getMaxClusterSize(network map[string][]string, cluster []string, seen aoc.S
 	return maxCluster
 }
 
-func FindMaxCluster(network map[string][]string) []string {
+func FindMaxCluster(network map[string][]string) string {
 	maxCluster := make([]string, 0)
 	seen := make(aoc.Set[string])
 	for computer := range network {
@@ -108,7 +103,7 @@ func FindMaxCluster(network map[string][]string) []string {
 		}
 	}
 
-	return fn.Sorted(maxCluster, func(a, b string) bool { return a < b })
+	return strings.Join(fn.Sorted(maxCluster, func(a, b string) bool { return a < b }), ",")
 }
 
 func ParseInputData(data string) map[string][]string {
@@ -137,5 +132,5 @@ func main() {
 	}
 
 	fmt.Printf("Part 1: %d\n", CountTConnections(network))
-	fmt.Printf("Part 2: %s\n", strings.Join(FindMaxCluster(network), ","))
+	fmt.Printf("Part 2: %s\n", FindMaxCluster(network))
 }
