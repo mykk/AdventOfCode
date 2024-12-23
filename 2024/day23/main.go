@@ -18,26 +18,17 @@ func spliceToSet(splice []string) aoc.Set[string] {
 	return set
 }
 
-func setToSplice(set aoc.Set[string]) []string {
-	splice := make([]string, 0, len(set))
-	for item := range set {
-		splice = append(splice, item)
-	}
-	return splice
-}
-
 func intersect(splice1, splice2 []string) []string {
 	set1, set2 := spliceToSet(splice1), spliceToSet(splice2)
 
-	set := make(aoc.Set[string])
-
+	intersected := make([]string, 0, len(set1))
 	for item := range set1 {
 		if set2.Contains(item) {
-			set.Add(item)
+			intersected = append(intersected, item)
 		}
 	}
 
-	return setToSplice(set)
+	return intersected
 }
 
 func CountTConnections(network map[string][]string) (count int) {
