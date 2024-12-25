@@ -2,8 +2,6 @@ package aoc_geometry
 
 import (
 	fn "AoC/functional"
-
-	"fmt"
 )
 
 type Point struct {
@@ -14,7 +12,7 @@ type Direction struct {
 	dx, dy int
 }
 
-func WithinBounds[T any](grid [][]T, pos Point) bool {
+func withinBounds[T any](grid [][]T, pos Point) bool {
 	return pos.Y >= 0 && pos.Y < len(grid) && pos.X >= 0 && pos.X < len(grid[pos.Y])
 }
 
@@ -24,13 +22,40 @@ type Hole struct {
 	Area      Set[Point]
 }
 
-type Area struct {
+type Region struct {
 	id               byte
 	Perimeter        []Point
 	InsidePerimeters [][]Point
 	Area             Set[Point]
 	Holes            []Hole
-	QuickPerimeter   int
+}
+
+func absInt(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+func getPerimeter(polygon []Point) int {
+	return fn.Reduce(polygon[:len(polygon)-1], 0, func(i, perimeter int, point Point) int {
+		nextPoint := polygon[i+1]
+		return perimeter + absInt(point.X-nextPoint.X) + absInt(point.Y-nextPoint.Y)
+	})
+}
+
+func (region *Region) GetOutsidePerimeter() int {
+	return getPerimeter(region.Perimeter)
+}
+
+func (region *Region) GetInsidePerimeter() int {
+	return fn.Reduce(region.InsidePerimeters, 0, func(_, perimeter int, hole []Point) int {
+		return perimeter + getPerimeter(hole)
+	})
+}
+
+func (hole *Hole) GetPerimeter() int {
+	return getPerimeter(hole.Perimeter)
 }
 
 type Set[T comparable] map[T]struct{}
@@ -164,7 +189,7 @@ func (SouthWalker) Walk(grid [][]byte, id byte, startPoint Point, outside Set[Po
 }
 
 func walkToEastStart(id byte, startPoint Point, grid [][]byte) Point {
-	area, _ := walkArea(id, startPoint, grid, make(Set[Point]), []Point{})
+	area := walkArea(id, startPoint, grid, make(Set[Point]))
 	for point := range area {
 		if point.Y < startPoint.Y || point.Y == startPoint.Y && point.X < startPoint.X {
 			startPoint = point
@@ -195,7 +220,7 @@ func WalkPerimeter(startPoint Point, grid [][]byte) (perimeter []Point) {
 	return WalkPerimeterCollectOutside(startPoint, grid, make(Set[Point]))
 }
 
-func walkArea(id byte, point Point, grid [][]byte, area Set[Point], perimeter []Point) (Set[Point], []Point) {
+func walkArea(id byte, point Point, grid [][]byte, area Set[Point]) Set[Point] {
 	if id != grid[point.Y][point.X] {
 		panic("position id should match given id")
 	}
@@ -203,24 +228,16 @@ func walkArea(id byte, point Point, grid [][]byte, area Set[Point], perimeter []
 
 	area.Add(point)
 
-	for _, dir := range directions {
-		nextPoint := Point{point.X + dir.dx, point.Y + dir.dy}
-
-		if !WithinBounds(grid, nextPoint) || grid[nextPoint.Y][nextPoint.X] != id {
-			perimeter = append(perimeter, nextPoint)
-		}
-	}
-
 	for _, direction := range directions {
 		nextPoint := Point{point.X + direction.dx, point.Y + direction.dy}
 
-		if area.Contains(nextPoint) || !WithinBounds(grid, nextPoint) || grid[nextPoint.Y][nextPoint.X] != id {
+		if area.Contains(nextPoint) || !withinBounds(grid, nextPoint) || grid[nextPoint.Y][nextPoint.X] != id {
 			continue
 		}
-		area, perimeter = walkArea(id, nextPoint, grid, area, perimeter)
+		area = walkArea(id, nextPoint, grid, area)
 	}
 
-	return area, perimeter
+	return area
 }
 
 func walkHole(id byte, point Point, grid [][]byte, holeArea Set[Point]) {
@@ -231,7 +248,7 @@ func walkHole(id byte, point Point, grid [][]byte, holeArea Set[Point]) {
 	for _, direction := range directions {
 		nextPoint := Point{point.X + direction.dx, point.Y + direction.dy}
 
-		if !holeArea.Contains(nextPoint) && WithinBounds(grid, nextPoint) && grid[nextPoint.Y][nextPoint.X] == id {
+		if !holeArea.Contains(nextPoint) && withinBounds(grid, nextPoint) && grid[nextPoint.Y][nextPoint.X] == id {
 			walkHole(id, nextPoint, grid, holeArea)
 		}
 	}
@@ -246,7 +263,7 @@ func collectHoles(id byte, point Point, grid [][]byte, area Set[Point], walked S
 	walked.Add(point)
 	for _, direction := range directions {
 		nextPoint := Point{point.X + direction.dx, point.Y + direction.dy}
-		if walked.Contains(nextPoint) || !WithinBounds(grid, nextPoint) {
+		if walked.Contains(nextPoint) || !withinBounds(grid, nextPoint) {
 			continue
 		}
 		if grid[nextPoint.Y][nextPoint.X] == id {
@@ -261,51 +278,13 @@ func collectHoles(id byte, point Point, grid [][]byte, area Set[Point], walked S
 	return holes
 }
 
-func WalkArea(id byte, startPoint Point, grid [][]byte, outside Set[Point]) (Set[Point], []Hole, []Point) {
+func WalkArea(id byte, startPoint Point, grid [][]byte, outside Set[Point]) (Set[Point], []Hole) {
 	if id != grid[startPoint.Y][startPoint.X] {
 		panic("starting position id should match given id")
 	}
-	area, perimeter := walkArea(id, startPoint, grid, make(Set[Point]), []Point{})
+	area := walkArea(id, startPoint, grid, make(Set[Point]))
 	holes := collectHoles(id, startPoint, grid, area, make(Set[Point]), []Hole{}, outside)
-	return area, holes, perimeter
-}
-
-func AbsInt(n int) int {
-	if n < 0 {
-		return -n
-	}
-	return n
-}
-
-func getPerimeter(polygon []Point) int {
-	return fn.Reduce(polygon[:len(polygon)-1], 0, func(i, perimeter int, point Point) int {
-		nextPoint := polygon[i+1]
-		return perimeter + AbsInt(AbsInt(point.X)-AbsInt(nextPoint.X)) + AbsInt(AbsInt(point.Y)-AbsInt(nextPoint.Y))
-	})
-}
-
-func GetTotalPerimeter(area Area) int {
-	outsidePerimeter := getPerimeter(area.Perimeter)
-	holePerimeter := fn.Reduce(area.InsidePerimeters, 0, func(_, price int, hole []Point) int { return price + getPerimeter(hole) })
-	return outsidePerimeter + holePerimeter
-}
-
-func printArea(id byte, grid [][]byte, area Set[Point]) {
-	for y, row := range grid {
-		for x := range row {
-			if area.Contains(Point{X: x, Y: y}) {
-				fmt.Printf("%c", id)
-			} else {
-				fmt.Print(".")
-			}
-		}
-
-		fmt.Println()
-	}
-	fmt.Println()
-	fmt.Println()
-	fmt.Println()
-	fmt.Println()
+	return area, holes
 }
 
 func getInsideParameters(grid [][]byte, holes []Hole) [][]Point {
@@ -334,27 +313,17 @@ func getInsideParameters(grid [][]byte, holes []Hole) [][]Point {
 	return perimeters
 }
 
-func Walk(startPoint Point, grid [][]byte) Area {
+func Walk(startPoint Point, grid [][]byte) Region {
 	id := grid[startPoint.Y][startPoint.X]
 
 	outside := make(Set[Point])
 	perimeter := WalkPerimeterCollectOutside(startPoint, grid, outside)
 
-	area, holes, quickPerimeter := WalkArea(id, startPoint, grid, outside)
-
-	thisArea := Area{id: id, Perimeter: perimeter, InsidePerimeters: getInsideParameters(grid, holes), Area: area, Holes: holes}
-	perimeterValue := GetTotalPerimeter(thisArea)
-	if perimeterValue != len(quickPerimeter) {
-		perimeterValue = GetTotalPerimeter(thisArea)
-		printArea(id, grid, area)
-		GetTotalPerimeter(thisArea)
-	}
-
-	thisArea.QuickPerimeter = len(quickPerimeter)
-	return thisArea
+	area, holes := WalkArea(id, startPoint, grid, outside)
+	return Region{id: id, Perimeter: perimeter, InsidePerimeters: getInsideParameters(grid, holes), Area: area, Holes: holes}
 }
 
-func constructArea(point Point, grid [][]byte, usedCoordinates Set[Point]) Area {
+func constructArea(point Point, grid [][]byte, usedCoordinates Set[Point]) Region {
 	area := Walk(point, grid)
 
 	for point := range area.Area {
@@ -369,7 +338,7 @@ func constructArea(point Point, grid [][]byte, usedCoordinates Set[Point]) Area 
 	return area
 }
 
-func AreasFromGrid(grid [][]byte) (areas []Area) {
+func RegionsFromGrid(grid [][]byte) (regions []Region) {
 	usedCoordinates := make(Set[Point])
 	for y, row := range grid {
 		for x := range row {
@@ -377,7 +346,7 @@ func AreasFromGrid(grid [][]byte) (areas []Area) {
 			if usedCoordinates.Contains(point) {
 				continue
 			}
-			areas = append(areas, constructArea(point, grid, usedCoordinates))
+			regions = append(regions, constructArea(point, grid, usedCoordinates))
 		}
 	}
 

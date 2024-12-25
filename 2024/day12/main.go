@@ -7,35 +7,18 @@ import (
 	"os"
 )
 
-func AbsInt(n int) int {
-	if n < 0 {
-		return -n
-	}
-	return n
-}
+func CalculatePrice(regions []geom.Region) int {
+	return fn.Reduce(regions, 0, func(_, price int, region geom.Region) int {
+		perimeter := region.GetInsidePerimeter() + region.GetOutsidePerimeter()
 
-func getPerimeter(polygon []geom.Point) int {
-	return fn.Reduce(polygon[:len(polygon)-1], 0, func(i, perimeter int, point geom.Point) int {
-		nextPoint := polygon[i+1]
-		return perimeter + AbsInt(point.X-nextPoint.X) + AbsInt(point.Y-nextPoint.Y)
-	})
-}
-
-func getTotalPerimeter(area geom.Area) int {
-	return getPerimeter(area.Perimeter) + fn.Reduce(area.InsidePerimeters, 0, func(_, perimeter int, hole []geom.Point) int { return perimeter + getPerimeter(hole) })
-}
-
-func CalculatePrice(areas []geom.Area) int {
-	return fn.Reduce(areas, 0, func(_, price int, area geom.Area) int {
-		perimeter := getTotalPerimeter(area)
-		return price + len(area.Area)*perimeter + fn.Reduce(area.Holes, 0, func(_, holePrice int, hole geom.Hole) int {
-			return holePrice + len(hole.Area)*getPerimeter(hole.Perimeter)
+		return price + len(region.Area)*perimeter + fn.Reduce(region.Holes, 0, func(_, holePrice int, hole geom.Hole) int {
+			return holePrice + len(hole.Area)*hole.GetPerimeter()
 		})
 	})
 }
 
-func CalculatePrice2(areas []geom.Area) int {
-	return fn.Reduce(areas, 0, func(_, price int, area geom.Area) int {
+func CalculateDiscountPrice(regions []geom.Region) int {
+	return fn.Reduce(regions, 0, func(_, price int, area geom.Region) int {
 		perimeter := len(area.Perimeter) - 1 + fn.Reduce(area.InsidePerimeters, 0, func(_, sum int, points []geom.Point) int { return sum + len(points) - 1 })
 
 		return price + len(area.Area)*perimeter + fn.Reduce(area.Holes, 0, func(_, holePrice int, hole geom.Hole) int {
@@ -44,9 +27,9 @@ func CalculatePrice2(areas []geom.Area) int {
 	})
 }
 
-func ParseInputData(data string) []geom.Area {
+func ParseInputData(data string) []geom.Region {
 	garden := fn.MustTransform(fn.GetLines(data), func(line string) []byte { return []byte(line) })
-	return geom.AreasFromGrid(garden)
+	return geom.RegionsFromGrid(garden)
 }
 
 func main() {
@@ -63,6 +46,5 @@ func main() {
 	}
 
 	fmt.Printf("Part 1: %d\n", CalculatePrice(areas))
-
-	fmt.Printf("Part 2: %d\n", CalculatePrice2(areas))
+	fmt.Printf("Part 2: %d\n", CalculateDiscountPrice(areas))
 }
