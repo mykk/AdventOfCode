@@ -22,7 +22,7 @@ func getPerimeter(polygon []geom.Point) int {
 }
 
 func getTotalPerimeter(area geom.Area) int {
-	return getPerimeter(area.Perimeter) + fn.Reduce(area.Holes, 0, func(_, perimeter int, hole geom.Hole) int { return perimeter + getPerimeter(hole.Perimeter) })
+	return getPerimeter(area.Perimeter) + fn.Reduce(area.InsidePerimeters, 0, func(_, perimeter int, hole []geom.Point) int { return perimeter + getPerimeter(hole) })
 }
 
 func CalculatePrice(areas []geom.Area) int {
@@ -30,6 +30,16 @@ func CalculatePrice(areas []geom.Area) int {
 		perimeter := getTotalPerimeter(area)
 		return price + len(area.Area)*perimeter + fn.Reduce(area.Holes, 0, func(_, holePrice int, hole geom.Hole) int {
 			return holePrice + len(hole.Area)*getPerimeter(hole.Perimeter)
+		})
+	})
+}
+
+func CalculatePrice2(areas []geom.Area) int {
+	return fn.Reduce(areas, 0, func(_, price int, area geom.Area) int {
+		perimeter := len(area.Perimeter) - 1 + fn.Reduce(area.InsidePerimeters, 0, func(_, sum int, points []geom.Point) int { return sum + len(points) - 1 })
+
+		return price + len(area.Area)*perimeter + fn.Reduce(area.Holes, 0, func(_, holePrice int, hole geom.Hole) int {
+			return holePrice + len(hole.Area)*(len(hole.Perimeter)-1)
 		})
 	})
 }
@@ -53,4 +63,6 @@ func main() {
 	}
 
 	fmt.Printf("Part 1: %d\n", CalculatePrice(areas))
+
+	fmt.Printf("Part 2: %d\n", CalculatePrice2(areas))
 }

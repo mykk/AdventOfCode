@@ -223,6 +223,20 @@ func Test(t *testing.T) {
 		assert.Equal(t, []Point{{1, 0}, {3, 0}, {3, 1}, {4, 1}, {4, 2}, {3, 2}, {3, 3}, {4, 3}, {4, 2}, {5, 2}, {5, 4}, {0, 4}, {0, 1}, {1, 1}, {1, 0}}, perimeter)
 	})
 
+	t.Run("PerimeterTest12_8", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("HH HH "))
+		testData = append(testData, []byte("HHHH H"))
+		testData = append(testData, []byte("HHHHHH"))
+
+		areas := AreasFromGrid(testData)
+
+		assert.Equal(t, []Point{{0, 0}, {2, 0}, {2, 1}, {3, 1}, {3, 0}, {5, 0}, {5, 1}, {4, 1}, {4, 2}, {5, 2}, {5, 1}, {6, 1}, {6, 3}, {0, 3}, {0, 0}}, areas[0].Perimeter)
+
+		perimeter := GetTotalPerimeter(areas[0])
+		assert.Equal(t, 24, perimeter)
+	})
+
 	t.Run("AreaTest1", func(t *testing.T) {
 		testData := [][]byte{}
 		testData = append(testData, []byte("AAAA"))
@@ -316,5 +330,22 @@ func Test(t *testing.T) {
 		assert.True(t, fn.All(areas, func(_ int, area Area) bool {
 			return len(area.Holes) == 0
 		}))
+	})
+
+	t.Run("AreaTest5__", func(t *testing.T) {
+		testData := [][]byte{}
+		testData = append(testData, []byte("OOOOO"))
+		testData = append(testData, []byte("OXXXO"))
+		testData = append(testData, []byte("OOBBO"))
+		testData = append(testData, []byte("OOOOO"))
+		testData = append(testData, []byte("OOOBB"))
+
+		areas := AreasFromGrid(testData)
+		for _, area := range areas {
+			if area.id != 'O' {
+				continue
+			}
+			assert.Equal(t, area.QuickPerimeter, GetTotalPerimeter(area))
+		}
 	})
 }
