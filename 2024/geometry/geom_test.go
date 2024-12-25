@@ -229,12 +229,11 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("HHHH H"))
 		testData = append(testData, []byte("HHHHHH"))
 
-		areas := AreasFromGrid(testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{0, 0}, {2, 0}, {2, 1}, {3, 1}, {3, 0}, {5, 0}, {5, 1}, {4, 1}, {4, 2}, {5, 2}, {5, 1}, {6, 1}, {6, 3}, {0, 3}, {0, 0}}, areas[0].Perimeter)
+		assert.Equal(t, []Point{{0, 0}, {2, 0}, {2, 1}, {3, 1}, {3, 0}, {5, 0}, {5, 1}, {4, 1}, {4, 2}, {5, 2}, {5, 1}, {6, 1}, {6, 3}, {0, 3}, {0, 0}}, regions[0].Perimeter)
 
-		perimeter := GetTotalPerimeter(areas[0])
-		assert.Equal(t, 24, perimeter)
+		assert.Equal(t, 24, regions[0].Perimeter)
 	})
 
 	t.Run("AreaTest1", func(t *testing.T) {
@@ -244,29 +243,29 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("BBCC"))
 		testData = append(testData, []byte("EEEC"))
 
-		areas := AreasFromGrid(testData)
-		assert.Equal(t, 5, len(areas))
+		regions := RegionsFromGrid(testData)
+		assert.Equal(t, 5, len(regions))
 
-		assert.True(t, fn.All(areas, func(_ int, area Area) bool { return len(area.Holes) == 0 }))
-		assert.True(t, fn.All(areas, func(_ int, area Area) bool {
-			if area.id == 'A' {
-				return len(area.Area) == 4
+		assert.True(t, fn.All(regions, func(_ int, region Region) bool { return len(region.Holes) == 0 }))
+		assert.True(t, fn.All(regions, func(_ int, region Region) bool {
+			if region.id == 'A' {
+				return len(region.Area) == 4
 			}
 
-			if area.id == 'B' {
-				return len(area.Area) == 4
+			if region.id == 'B' {
+				return len(region.Area) == 4
 			}
 
-			if area.id == 'C' {
-				return len(area.Area) == 4
+			if region.id == 'C' {
+				return len(region.Area) == 4
 			}
 
-			if area.id == 'D' {
-				return len(area.Area) == 1
+			if region.id == 'D' {
+				return len(region.Area) == 1
 			}
 
-			if area.id == 'E' {
-				return len(area.Area) == 3
+			if region.id == 'E' {
+				return len(region.Area) == 3
 			}
 
 			return false
@@ -281,11 +280,11 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("OXOXO"))
 		testData = append(testData, []byte("OOOOO"))
 
-		areas := AreasFromGrid(testData)
-		assert.Equal(t, 1, len(areas))
-		assert.Equal(t, 4, len(areas[0].Holes))
+		regions := RegionsFromGrid(testData)
+		assert.Equal(t, 1, len(regions))
+		assert.Equal(t, 4, len(regions[0].Holes))
 
-		assert.True(t, fn.All(areas[0].Holes, func(_ int, hole Hole) bool {
+		assert.True(t, fn.All(regions[0].Holes, func(_ int, hole Hole) bool {
 			return len(hole.Area) == 1 && len(hole.Perimeter) == 5
 		}))
 	})
@@ -298,19 +297,19 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("OOOOO"))
 		testData = append(testData, []byte("OOOBB"))
 
-		areas := AreasFromGrid(testData)
-		assert.Equal(t, 2, len(areas))
-		assert.True(t, fn.All(areas, func(_ int, area Area) bool {
-			if area.id == 'O' && len(area.Holes) != 1 {
+		regions := RegionsFromGrid(testData)
+		assert.Equal(t, 2, len(regions))
+		assert.True(t, fn.All(regions, func(_ int, region Region) bool {
+			if region.id == 'O' && len(region.Holes) != 1 {
 				return false
 			}
 
-			if area.id == 'O' {
-				return len(area.Holes[0].Area) == 3
+			if region.id == 'O' {
+				return len(region.Holes[0].Area) == 3
 			}
 
-			if area.id == 'B' {
-				return len(area.Holes) == 0
+			if region.id == 'B' {
+				return len(region.Holes) == 0
 			}
 
 			return false
@@ -325,10 +324,10 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("OOOOO"))
 		testData = append(testData, []byte("OOOBB"))
 
-		areas := AreasFromGrid(testData)
-		assert.Equal(t, 3, len(areas))
-		assert.True(t, fn.All(areas, func(_ int, area Area) bool {
-			return len(area.Holes) == 0
+		regions := RegionsFromGrid(testData)
+		assert.Equal(t, 3, len(regions))
+		assert.True(t, fn.All(regions, func(_ int, region Region) bool {
+			return len(region.Holes) == 0
 		}))
 	})
 
@@ -340,12 +339,12 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("OOOOO"))
 		testData = append(testData, []byte("OOOBB"))
 
-		areas := AreasFromGrid(testData)
-		for _, area := range areas {
-			if area.id != 'O' {
+		regions := RegionsFromGrid(testData)
+		for _, region := range regions {
+			if region.id != 'O' {
 				continue
 			}
-			assert.Equal(t, area.QuickPerimeter, GetTotalPerimeter(area))
+			assert.Equal(t, 19, region.Perimeter)
 		}
 	})
 }
