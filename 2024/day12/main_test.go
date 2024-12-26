@@ -18,7 +18,7 @@ MIIISIJEEE
 MMMISSJEEE`
 
 func Test(t *testing.T) {
-	t.Run("CountPebbles", func(t *testing.T) {
+	t.Run("CalculateRegionPrices", func(t *testing.T) {
 
 		regions := ParseInputData(EXAMPLEDATA)
 
