@@ -40,10 +40,6 @@ func main() {
 	}
 
 	regions := ParseInputData(string(inputData))
-	if err != nil {
-		fmt.Printf("Error parsing input data: %v\n", err)
-		return
-	}
 
 	fmt.Printf("Part 1: %d\n", CalculatePrice(regions))
 	fmt.Printf("Part 2: %d\n", CalculateDiscountPrice(regions))
