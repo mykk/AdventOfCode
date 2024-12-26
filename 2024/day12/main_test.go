@@ -6,13 +6,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const EXAMPLEDATA string = `125 17`
+const EXAMPLEDATA string = `RRRRIICCFF
+RRRRIICCCF
+VVRRRCCFFF
+VVRCCCJFFF
+VVVVCJJCFE
+VVIVCCJJEE
+VVIIICJJEE
+MIIIIIJJEE
+MIIISIJEEE
+MMMISSJEEE`
 
 func Test(t *testing.T) {
 	t.Run("CountPebbles", func(t *testing.T) {
-		stones, err := ParseInputData(EXAMPLEDATA)
-		assert.Nil(t, err)
 
-		assert.Equal(t, 55312, CountPlutonianPebbles(stones, 25))
+		regions := ParseInputData(EXAMPLEDATA)
+
+		assert.Equal(t, 1930, CalculatePrice(regions))
+		assert.Equal(t, 1206, CalculateDiscountPrice(regions))
 	})
 }
