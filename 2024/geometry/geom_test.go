@@ -10,11 +10,12 @@ import (
 
 func Test(t *testing.T) {
 	t.Run("PerimeterTest1", func(t *testing.T) {
-		const PERIMETER_DATA string = `AAA`
+		testData := [][]byte{}
+		testData = append(testData, []byte("AAA"))
 
-		perimeter := WalkPerimeter(Point{0, 0}, [][]byte{[]byte(PERIMETER_DATA)})
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{0, 0}, {3, 0}, {3, 1}, {0, 1}, {0, 0}}, perimeter)
+		assert.Equal(t, []Point{{0, 0}, {3, 0}, {3, 1}, {0, 1}, {0, 0}}, regions[0].Perimeter)
 	})
 
 	t.Run("PerimeterTest2", func(t *testing.T) {
@@ -22,9 +23,14 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte(" A "))
 		testData = append(testData, []byte("AAA"))
 
-		perimeter := WalkPerimeter(Point{0, 1}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{1, 0}, {2, 0}, {2, 1}, {3, 1}, {3, 2}, {0, 2}, {0, 1}, {1, 1}, {1, 0}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{1, 0}) {
+				continue
+			}
+			assert.Equal(t, []Point{{1, 0}, {2, 0}, {2, 1}, {3, 1}, {3, 2}, {0, 2}, {0, 1}, {1, 1}, {1, 0}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest3", func(t *testing.T) {
@@ -33,9 +39,13 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte(" A "))
 		testData = append(testData, []byte("AAA"))
 
-		perimeter := WalkPerimeter(Point{0, 0}, testData)
-
-		assert.Equal(t, []Point{{0, 0}, {2, 0}, {2, 2}, {3, 2}, {3, 3}, {0, 3}, {0, 2}, {1, 2}, {1, 1}, {0, 1}, {0, 0}}, perimeter)
+		regions := RegionsFromGrid(testData)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{0, 0}) {
+				continue
+			}
+			assert.Equal(t, []Point{{0, 0}, {2, 0}, {2, 2}, {3, 2}, {3, 3}, {0, 3}, {0, 2}, {1, 2}, {1, 1}, {0, 1}, {0, 0}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest4", func(t *testing.T) {
@@ -44,13 +54,18 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte(" A "))
 		testData = append(testData, []byte("AAA"))
 
-		perimeter := WalkPerimeter(Point{1, 0}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{1, 0}, {3, 0},
-			{3, 1}, {2, 1},
-			{2, 2}, {3, 2},
-			{3, 3}, {0, 3}, {0, 2},
-			{1, 2}, {1, 0}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{1, 0}) {
+				continue
+			}
+			assert.Equal(t, []Point{{1, 0}, {3, 0},
+				{3, 1}, {2, 1},
+				{2, 2}, {3, 2},
+				{3, 3}, {0, 3}, {0, 2},
+				{1, 2}, {1, 0}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest5", func(t *testing.T) {
@@ -59,13 +74,18 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte(" A "))
 		testData = append(testData, []byte("AAA"))
 
-		perimeter := WalkPerimeter(Point{0, 0}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{0, 0}, {3, 0},
-			{3, 1}, {2, 1},
-			{2, 2}, {3, 2},
-			{3, 3}, {0, 3}, {0, 2},
-			{1, 2}, {1, 1}, {0, 1}, {0, 0}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{0, 0}) {
+				continue
+			}
+			assert.Equal(t, []Point{{0, 0}, {3, 0},
+				{3, 1}, {2, 1},
+				{2, 2}, {3, 2},
+				{3, 3}, {0, 3}, {0, 2},
+				{1, 2}, {1, 1}, {0, 1}, {0, 0}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest6", func(t *testing.T) {
@@ -75,16 +95,21 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte(" A "))
 		testData = append(testData, []byte("AAA"))
 
-		perimeter := WalkPerimeter(Point{2, 0}, testData)
+		regions := RegionsFromGrid(testData)
 
-		expected := []Point{{2, 0}, {3, 0},
-			{3, 2}, {2, 2},
-			{2, 3}, {3, 3},
-			{3, 4}, {0, 4}, {0, 3},
-			{1, 3}, {1, 2}, {0, 2}, {0, 1},
-			{2, 1}, {2, 0}}
+		for _, region := range regions {
+			if !region.Area.Contains(Point{2, 0}) {
+				continue
+			}
+			expected := []Point{{2, 0}, {3, 0},
+				{3, 2}, {2, 2},
+				{2, 3}, {3, 3},
+				{3, 4}, {0, 4}, {0, 3},
+				{1, 3}, {1, 2}, {0, 2}, {0, 1},
+				{2, 1}, {2, 0}}
 
-		assert.Equal(t, expected, perimeter)
+			assert.Equal(t, expected, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest7", func(t *testing.T) {
@@ -94,19 +119,25 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("AAA"))
 		testData = append(testData, []byte("AAA"))
 
-		perimeter := WalkPerimeter(Point{0, 0}, testData)
+		regions := RegionsFromGrid(testData)
 
-		expected := []Point{{0, 0}, {3, 0}, {3, 4}, {0, 4}, {0, 0}}
+		for _, region := range regions {
+			if !region.Area.Contains(Point{0, 0}) {
+				continue
+			}
+			expected := []Point{{0, 0}, {3, 0}, {3, 4}, {0, 4}, {0, 0}}
 
-		assert.Equal(t, expected, perimeter)
+			assert.Equal(t, expected, regions[0].Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest8", func(t *testing.T) {
-		const PERIMETER_DATA string = `AAAA`
+		testData := [][]byte{}
+		testData = append(testData, []byte("AAAA"))
 
-		perimeter := WalkPerimeter(Point{3, 0}, [][]byte{[]byte(PERIMETER_DATA)})
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{0, 0}, {4, 0}, {4, 1}, {0, 1}, {0, 0}}, perimeter)
+		assert.Equal(t, []Point{{0, 0}, {4, 0}, {4, 1}, {0, 1}, {0, 0}}, regions[0].Perimeter)
 	})
 
 	t.Run("PerimeterTest9", func(t *testing.T) {
@@ -114,9 +145,9 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("A    "))
 		testData = append(testData, []byte("AAAAA"))
 
-		perimeter := WalkPerimeter(Point{3, 1}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{0, 0}, {1, 0}, {1, 1}, {5, 1}, {5, 2}, {0, 2}, {0, 0}}, perimeter)
+		assert.Equal(t, []Point{{0, 0}, {1, 0}, {1, 1}, {5, 1}, {5, 2}, {0, 2}, {0, 0}}, regions[0].Perimeter)
 	})
 
 	t.Run("PerimeterTest10", func(t *testing.T) {
@@ -124,9 +155,14 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("A    "))
 		testData = append(testData, []byte(" AAAA"))
 
-		perimeter := WalkPerimeter(Point{3, 1}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{1, 1}, {5, 1}, {5, 2}, {1, 2}, {1, 1}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{X: 1, Y: 1}) {
+				continue
+			}
+			assert.Equal(t, []Point{{1, 1}, {5, 1}, {5, 2}, {1, 2}, {1, 1}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest11", func(t *testing.T) {
@@ -134,9 +170,14 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("    AA"))
 		testData = append(testData, []byte("AAAA  "))
 
-		perimeter := WalkPerimeter(Point{1, 1}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{0, 1}, {4, 1}, {4, 2}, {0, 2}, {0, 1}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{X: 1, Y: 1}) {
+				continue
+			}
+			assert.Equal(t, []Point{{0, 1}, {4, 1}, {4, 2}, {0, 2}, {0, 1}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest12_1", func(t *testing.T) {
@@ -145,9 +186,14 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("  AAAA  "))
 		testData = append(testData, []byte("AA    AA"))
 
-		perimeter := WalkPerimeter(Point{2, 1}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{2, 1}, {6, 1}, {6, 2}, {2, 2}, {2, 1}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{X: 3, Y: 1}) {
+				continue
+			}
+			assert.Equal(t, []Point{{2, 1}, {6, 1}, {6, 2}, {2, 2}, {2, 1}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest12_2", func(t *testing.T) {
@@ -157,9 +203,14 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("  AAAA  "))
 		testData = append(testData, []byte("AA    AA"))
 
-		perimeter := WalkPerimeter(Point{2, 1}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{2, 1}, {3, 1}, {3, 2}, {6, 2}, {6, 3}, {2, 3}, {2, 1}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{X: 2, Y: 1}) {
+				continue
+			}
+			assert.Equal(t, []Point{{2, 1}, {3, 1}, {3, 2}, {6, 2}, {6, 3}, {2, 3}, {2, 1}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest12_3", func(t *testing.T) {
@@ -170,9 +221,14 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("AA   A  "))
 		testData = append(testData, []byte("AA    AA"))
 
-		perimeter := WalkPerimeter(Point{2, 1}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{2, 1}, {3, 1}, {3, 2}, {6, 2}, {6, 4}, {5, 4}, {5, 3}, {2, 3}, {2, 1}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{X: 2, Y: 1}) {
+				continue
+			}
+			assert.Equal(t, []Point{{2, 1}, {3, 1}, {3, 2}, {6, 2}, {6, 4}, {5, 4}, {5, 3}, {2, 3}, {2, 1}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest12_4", func(t *testing.T) {
@@ -183,9 +239,14 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("AA   A  "))
 		testData = append(testData, []byte("AA   AAA"))
 
-		perimeter := WalkPerimeter(Point{2, 1}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{2, 1}, {3, 1}, {3, 2}, {6, 2}, {6, 4}, {8, 4}, {8, 5}, {5, 5}, {5, 3}, {2, 3}, {2, 1}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{X: 2, Y: 1}) {
+				continue
+			}
+			assert.Equal(t, []Point{{2, 1}, {3, 1}, {3, 2}, {6, 2}, {6, 4}, {8, 4}, {8, 5}, {5, 5}, {5, 3}, {2, 3}, {2, 1}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest12_5", func(t *testing.T) {
@@ -194,9 +255,9 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("A"))
 		testData = append(testData, []byte("A"))
 
-		perimeter := WalkPerimeter(Point{0, 2}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{0, 0}, {1, 0}, {1, 3}, {0, 3}, {0, 0}}, perimeter)
+		assert.Equal(t, []Point{{0, 0}, {1, 0}, {1, 3}, {0, 3}, {0, 0}}, regions[0].Perimeter)
 	})
 
 	t.Run("PerimeterTest12_6", func(t *testing.T) {
@@ -206,9 +267,14 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("A "))
 		testData = append(testData, []byte("A "))
 
-		perimeter := WalkPerimeter(Point{0, 2}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{0, 1}, {1, 1}, {1, 4}, {0, 4}, {0, 1}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{X: 0, Y: 1}) {
+				continue
+			}
+			assert.Equal(t, []Point{{0, 1}, {1, 1}, {1, 4}, {0, 4}, {0, 1}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest12_7", func(t *testing.T) {
@@ -218,9 +284,17 @@ func Test(t *testing.T) {
 		testData = append(testData, []byte("WWW W "))
 		testData = append(testData, []byte("WWWWW "))
 
-		perimeter := WalkPerimeter(Point{0, 2}, testData)
+		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{1, 0}, {3, 0}, {3, 1}, {4, 1}, {4, 2}, {3, 2}, {3, 3}, {4, 3}, {4, 2}, {5, 2}, {5, 4}, {0, 4}, {0, 1}, {1, 1}, {1, 0}}, perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{X: 1, Y: 0}) {
+				continue
+			}
+			assert.Equal(t, []Point{{1, 0}, {3, 0}, {3, 1},
+				{4, 1}, {4, 2}, {3, 2}, {3, 3},
+				{4, 3}, {4, 2}, {5, 2}, {5, 4},
+				{0, 4}, {0, 1}, {1, 1}, {1, 0}}, region.Perimeter)
+		}
 	})
 
 	t.Run("PerimeterTest12_8", func(t *testing.T) {
@@ -231,9 +305,20 @@ func Test(t *testing.T) {
 
 		regions := RegionsFromGrid(testData)
 
-		assert.Equal(t, []Point{{0, 0}, {2, 0}, {2, 1}, {3, 1}, {3, 0}, {5, 0}, {5, 1}, {4, 1}, {4, 2}, {5, 2}, {5, 1}, {6, 1}, {6, 3}, {0, 3}, {0, 0}}, regions[0].Perimeter)
+		for _, region := range regions {
+			if !region.Area.Contains(Point{X: 0, Y: 0}) {
+				continue
+			}
+			assert.Equal(t, []Point{{0, 0}, {2, 0},
+				{2, 1}, {3, 1},
+				{3, 0}, {5, 0},
+				{5, 1}, {4, 1},
+				{4, 2}, {5, 2},
+				{5, 1}, {6, 1},
+				{6, 3}, {0, 3}, {0, 0}}, region.Perimeter)
 
-		assert.Equal(t, 24, regions[0].Perimeter)
+			assert.Equal(t, 24, region.GetInsidePerimeter()+region.GetOutsidePerimeter())
+		}
 	})
 
 	t.Run("AreaTest1", func(t *testing.T) {
@@ -344,7 +429,8 @@ func Test(t *testing.T) {
 			if region.id != 'O' {
 				continue
 			}
-			assert.Equal(t, 19, region.Perimeter)
+			assert.Equal(t, 20, region.GetOutsidePerimeter())
+			assert.Equal(t, 10, region.GetInsidePerimeter())
 		}
 	})
 }

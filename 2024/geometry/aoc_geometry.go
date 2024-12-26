@@ -13,6 +13,8 @@ type Direction struct {
 	DX, DY int
 }
 
+var Directions = []Direction{{-1, 0}, {1, 0}, {0, 1}, {0, -1}}
+
 type Hole struct {
 	id        byte
 	Perimeter []Point
@@ -60,7 +62,7 @@ func (hole *Hole) GetPerimeter() int {
 }
 
 type perimeterWalker interface {
-	walk(grid [][]byte, id byte, startPoint Point, outside aoc.Set[Point]) (endPoint Point, nextWalker perimeterWalker)
+	walk(grid [][]byte, startPoint Point, outside aoc.Set[Point], checkId func(id byte) bool) (endPoint Point, nextWalker perimeterWalker)
 }
 
 type eastWalker struct{}
@@ -68,20 +70,20 @@ type westWalker struct{}
 type northWalker struct{}
 type southWalker struct{}
 
-func (eastWalker) walk(grid [][]byte, id byte, startPoint Point, outside aoc.Set[Point]) (endPoint Point, nextWalker perimeterWalker) {
-	if id != grid[startPoint.Y][startPoint.X] {
+func (eastWalker) walk(grid [][]byte, startPoint Point, outside aoc.Set[Point], checkId func(id byte) bool) (endPoint Point, nextWalker perimeterWalker) {
+	if !checkId(grid[startPoint.Y][startPoint.X]) {
 		panic("starting position id should match given id")
 	}
 
 	currentPoint := startPoint
 
-	if currentPoint.X == 0 || grid[currentPoint.Y][currentPoint.X-1] != id {
+	if currentPoint.X == 0 || !checkId(grid[currentPoint.Y][currentPoint.X-1]) {
 		outside.Add(Point{X: currentPoint.X - 1, Y: currentPoint.Y})
 	}
 	outside.Add(Point{X: currentPoint.X, Y: currentPoint.Y - 1})
 
 	for {
-		if currentPoint.X == len(grid[currentPoint.Y])-1 || grid[currentPoint.Y][currentPoint.X+1] != id {
+		if currentPoint.X == len(grid[currentPoint.Y])-1 || !checkId(grid[currentPoint.Y][currentPoint.X+1]) {
 			currentPoint.X++
 
 			outside.Add(Point{X: currentPoint.X, Y: currentPoint.Y})
@@ -90,95 +92,93 @@ func (eastWalker) walk(grid [][]byte, id byte, startPoint Point, outside aoc.Set
 
 		currentPoint.X++
 
-		if currentPoint.Y > 0 && grid[currentPoint.Y-1][currentPoint.X] == id {
+		if currentPoint.Y > 0 && checkId(grid[currentPoint.Y-1][currentPoint.X]) {
 			return currentPoint, northWalker{}
-		} else {
-			outside.Add(Point{X: currentPoint.X, Y: currentPoint.Y - 1})
 		}
+
+		outside.Add(Point{X: currentPoint.X, Y: currentPoint.Y - 1})
 	}
 }
 
-func (westWalker) walk(grid [][]byte, id byte, startPoint Point, outside aoc.Set[Point]) (endPoint Point, nextWalker perimeterWalker) {
-	if id != grid[startPoint.Y-1][startPoint.X-1] {
+func (westWalker) walk(grid [][]byte, startPoint Point, outside aoc.Set[Point], checkId func(id byte) bool) (endPoint Point, nextWalker perimeterWalker) {
+	if !checkId(grid[startPoint.Y-1][startPoint.X-1]) {
 		panic("starting position id should match given id")
 	}
 
 	currentPoint := startPoint
 
-	if currentPoint.X == len(grid[startPoint.Y-1]) || grid[startPoint.Y-1][startPoint.X] != id {
+	if currentPoint.X == len(grid[startPoint.Y-1]) || !checkId(grid[startPoint.Y-1][startPoint.X]) {
 		outside.Add(Point{X: currentPoint.X, Y: startPoint.Y - 1})
 	}
-
 	outside.Add(Point{X: currentPoint.X - 1, Y: currentPoint.Y})
 
 	for {
 		currentPoint.X--
 
-		if currentPoint.X == 0 || grid[currentPoint.Y-1][currentPoint.X-1] != id {
+		if currentPoint.X == 0 || !checkId(grid[currentPoint.Y-1][currentPoint.X-1]) {
 			outside.Add(Point{X: currentPoint.X - 1, Y: currentPoint.Y - 1})
 			return currentPoint, northWalker{}
 		}
 
-		if currentPoint.X != 0 && currentPoint.Y < len(grid) && grid[currentPoint.Y][currentPoint.X-1] == id {
+		if currentPoint.X != 0 && currentPoint.Y < len(grid) && checkId(grid[currentPoint.Y][currentPoint.X-1]) {
 			return currentPoint, southWalker{}
-		} else {
-			outside.Add(Point{X: currentPoint.X - 1, Y: currentPoint.Y})
 		}
+		outside.Add(Point{X: currentPoint.X - 1, Y: currentPoint.Y})
 	}
 }
 
-func (northWalker) walk(grid [][]byte, id byte, startPoint Point, outside aoc.Set[Point]) (endPoint Point, nextWalker perimeterWalker) {
-	if id != grid[startPoint.Y-1][startPoint.X] {
+func (northWalker) walk(grid [][]byte, startPoint Point, outside aoc.Set[Point], checkId func(id byte) bool) (endPoint Point, nextWalker perimeterWalker) {
+	if !checkId(grid[startPoint.Y-1][startPoint.X]) {
 		panic("starting position id should match given id")
 	}
 
 	currentPoint := startPoint
 
-	outside.Add(Point{X: currentPoint.X - 1, Y: currentPoint.Y})
-	if currentPoint.Y == len(grid) || grid[currentPoint.Y][currentPoint.X] != id {
+	if currentPoint.Y == len(grid) || !checkId(grid[currentPoint.Y][currentPoint.X]) {
 		outside.Add(Point{X: currentPoint.X, Y: currentPoint.Y + 1})
 	}
+	outside.Add(Point{X: currentPoint.X - 1, Y: currentPoint.Y})
 
 	for {
 		currentPoint.Y--
 
-		if currentPoint.Y == 0 || grid[currentPoint.Y-1][currentPoint.X] != id {
+		if currentPoint.Y == 0 || !checkId(grid[currentPoint.Y-1][currentPoint.X]) {
 			outside.Add(Point{X: currentPoint.X, Y: currentPoint.Y - 1})
 			return currentPoint, eastWalker{}
 		}
 
-		if currentPoint.Y > 0 && currentPoint.X > 0 && grid[currentPoint.Y-1][currentPoint.X-1] == id {
+		if currentPoint.Y > 0 && currentPoint.X > 0 && checkId(grid[currentPoint.Y-1][currentPoint.X-1]) {
 			return currentPoint, westWalker{}
-		} else {
-			outside.Add(Point{X: currentPoint.X - 1, Y: currentPoint.Y})
 		}
+		outside.Add(Point{X: currentPoint.X - 1, Y: currentPoint.Y})
 	}
 }
 
-func (southWalker) walk(grid [][]byte, id byte, startPoint Point, outside aoc.Set[Point]) (endPoint Point, nextWalker perimeterWalker) {
-	if id != grid[startPoint.Y][startPoint.X-1] {
+func (southWalker) walk(grid [][]byte, startPoint Point, outside aoc.Set[Point], checkId func(id byte) bool) (endPoint Point, nextWalker perimeterWalker) {
+	if !checkId(grid[startPoint.Y][startPoint.X-1]) {
 		panic("starting position id should match given id")
 	}
 
 	currentPoint := startPoint
 
 	outside.Add(currentPoint)
+
 	for {
 		currentPoint.Y++
 
-		if currentPoint.Y == len(grid) || grid[currentPoint.Y][currentPoint.X-1] != id {
+		if currentPoint.Y == len(grid) || !checkId(grid[currentPoint.Y][currentPoint.X-1]) {
 			return currentPoint, westWalker{}
 		}
 
-		if currentPoint.Y < len(grid) && currentPoint.X < len(grid[currentPoint.Y]) && grid[currentPoint.Y][currentPoint.X] == id {
+		if currentPoint.Y < len(grid) && currentPoint.X < len(grid[currentPoint.Y]) && checkId(grid[currentPoint.Y][currentPoint.X]) {
 			return currentPoint, eastWalker{}
-		} else {
-			outside.Add(currentPoint)
 		}
+
+		outside.Add(currentPoint)
 	}
 }
 
-func walkToEastStart(id byte, startPoint Point, grid [][]byte, area aoc.Set[Point]) Point {
+func walkToStart(startPoint Point, grid [][]byte, area aoc.Set[Point]) Point {
 	for point := range area {
 		if point.Y < startPoint.Y || point.Y == startPoint.Y && point.X < startPoint.X {
 			startPoint = point
@@ -187,105 +187,102 @@ func walkToEastStart(id byte, startPoint Point, grid [][]byte, area aoc.Set[Poin
 	return startPoint
 }
 
-func WalkPerimeterCollectOutside(startPoint Point, grid [][]byte, area aoc.Set[Point], outside aoc.Set[Point]) (perimeter []Point) {
-	id := grid[startPoint.Y][startPoint.X]
+func constructPerimeterAndOutside(startPoint Point, grid [][]byte, area aoc.Set[Point], checkId func(byte) bool) (perimeter []Point, outside aoc.Set[Point]) {
+	outside = make(aoc.Set[Point])
+
+	startPoint = walkToStart(startPoint, grid, area)
 
 	var currentWalker perimeterWalker = eastWalker{}
-	startPoint = walkToEastStart(id, startPoint, grid, area)
-
-	currentPoint, currentWalker := currentWalker.walk(grid, id, startPoint, outside)
+	currentPoint, currentWalker := currentWalker.walk(grid, startPoint, outside, checkId)
 	perimeter = append(perimeter, startPoint)
 	perimeter = append(perimeter, currentPoint)
 
 	for currentPoint != startPoint {
-		currentPoint, currentWalker = currentWalker.walk(grid, id, currentPoint, outside)
+		currentPoint, currentWalker = currentWalker.walk(grid, currentPoint, outside, checkId)
 		perimeter = append(perimeter, currentPoint)
 	}
 	return
-
 }
 
-func constructArea(id byte, point Point, grid [][]byte, area aoc.Set[Point]) aoc.Set[Point] {
-	if id != grid[point.Y][point.X] {
+func constructCurrentIdPerimeterAndOutside(startPoint Point, grid [][]byte, area aoc.Set[Point]) (perimeter []Point, outside aoc.Set[Point]) {
+	id := grid[startPoint.Y][startPoint.X]
+	return constructPerimeterAndOutside(startPoint, grid, area, func(currentId byte) bool { return id == currentId })
+}
+
+func constructArea(point Point, grid [][]byte, area aoc.Set[Point], checkId func(byte) bool) aoc.Set[Point] {
+	if !checkId(grid[point.Y][point.X]) {
 		panic("position id should match given id")
 	}
-	directions := []Direction{{-1, 0}, {1, 0}, {0, 1}, {0, -1}}
 
 	area.Add(point)
 
-	for _, direction := range directions {
+	for _, direction := range Directions {
 		nextPoint := Point{point.X + direction.DX, point.Y + direction.DY}
 
-		if area.Contains(nextPoint) || !withinBounds(grid, nextPoint) || grid[nextPoint.Y][nextPoint.X] != id {
+		if area.Contains(nextPoint) || !withinBounds(grid, nextPoint) || !checkId(grid[nextPoint.Y][nextPoint.X]) {
 			continue
 		}
-		area = constructArea(id, nextPoint, grid, area)
+		area = constructArea(nextPoint, grid, area, checkId)
 	}
 
 	return area
+}
+
+func constructCurrentIdArea(id byte, point Point, grid [][]byte, area aoc.Set[Point]) aoc.Set[Point] {
+	return constructArea(point, grid, area, func(currentId byte) bool { return currentId == id })
 }
 
 func constructHoles(id byte, point Point, grid [][]byte, area aoc.Set[Point], walked aoc.Set[Point], holes []Hole, outside aoc.Set[Point]) []Hole {
 	if id != grid[point.Y][point.X] {
 		panic("position id should match given id")
 	}
-	directions := []Direction{{-1, 0}, {1, 0}, {0, 1}, {0, -1}}
 
 	walked.Add(point)
-	for _, direction := range directions {
+	for _, direction := range Directions {
 		nextPoint := Point{point.X + direction.DX, point.Y + direction.DY}
 		if walked.Contains(nextPoint) || !withinBounds(grid, nextPoint) {
 			continue
 		}
+
 		if grid[nextPoint.Y][nextPoint.X] == id {
 			holes = constructHoles(id, nextPoint, grid, area, walked, holes, outside)
-		} else if !outside.Contains(nextPoint) && !fn.Any(holes, func(_ int, hole Hole) bool { return hole.Area.Contains(nextPoint) }) {
-			holeArea := constructArea(grid[nextPoint.Y][nextPoint.X], nextPoint, grid, make(aoc.Set[Point]))
-			holePerimeter := WalkPerimeterCollectOutside(nextPoint, grid, holeArea, make(aoc.Set[Point]))
+		} else if !outside.Contains(nextPoint) && fn.All(holes, func(_ int, hole Hole) bool { return !hole.Area.Contains(nextPoint) }) {
+			holeArea := constructCurrentIdArea(grid[nextPoint.Y][nextPoint.X], nextPoint, grid, make(aoc.Set[Point]))
+			holePerimeter, _ := constructCurrentIdPerimeterAndOutside(nextPoint, grid, holeArea)
 			holes = append(holes, Hole{id: grid[nextPoint.Y][nextPoint.X], Area: holeArea, Perimeter: holePerimeter})
 		}
 	}
 	return holes
 }
 
-func getInsideParameters(grid [][]byte, holes []Hole) [][]Point {
-	newGrid := fn.MustTransform(grid, func(row []byte) []byte { return fn.MustTransform(row, func(byte) byte { return '.' }) })
+func getInsideParameters(id byte, grid [][]byte, holes []Hole) (insidePerimeters [][]Point) {
+	coveredAreas := make(aoc.Set[Point])
 
 	for _, hole := range holes {
-		for point := range hole.Area {
-			newGrid[point.Y][point.X] = 'X'
+		if coveredAreas.Contains(hole.Perimeter[0]) {
+			continue
+		}
+
+		joinedHoleArea := constructArea(hole.Perimeter[0], grid, make(aoc.Set[Point]), func(currentId byte) bool { return currentId != id })
+		holePerimeter, _ := constructPerimeterAndOutside(hole.Perimeter[0], grid, joinedHoleArea, func(currentId byte) bool { return currentId != id })
+		insidePerimeters = append(insidePerimeters, holePerimeter)
+
+		for areaPoint := range joinedHoleArea {
+			coveredAreas.Add(areaPoint)
 		}
 	}
-
-	perimeters := make([][]Point, 0)
-
-	for _, hole := range holes {
-		area := constructArea('X', hole.Perimeter[0], newGrid, make(aoc.Set[Point]))
-		newPerimeter := WalkPerimeterCollectOutside(hole.Perimeter[0], newGrid, area, make(aoc.Set[Point]))
-		if !fn.Any(perimeters, func(_ int, perimeter []Point) bool {
-			if len(newPerimeter) != len(perimeter) {
-				return false
-			}
-			return fn.All(perimeter, func(i int, point Point) bool { return newPerimeter[i] == point })
-		}) {
-			perimeters = append(perimeters, newPerimeter)
-		}
-	}
-
-	return perimeters
+	return
 }
 
 func constructRegion(startPoint Point, grid [][]byte) Region {
 	id := grid[startPoint.Y][startPoint.X]
 
-	area := constructArea(id, startPoint, grid, make(aoc.Set[Point]))
-
-	outside := make(aoc.Set[Point])
-	perimeter := WalkPerimeterCollectOutside(startPoint, grid, area, outside)
-
+	area := constructCurrentIdArea(id, startPoint, grid, make(aoc.Set[Point]))
+	perimeter, outside := constructCurrentIdPerimeterAndOutside(startPoint, grid, area)
 	holes := constructHoles(id, startPoint, grid, area, make(aoc.Set[Point]), []Hole{}, outside)
+	insidePerimeters := getInsideParameters(id, grid, holes)
 
-	return Region{id: id, Perimeter: perimeter, InsidePerimeters: getInsideParameters(grid, holes), Area: area, Holes: holes}
+	return Region{id: id, Perimeter: perimeter, InsidePerimeters: insidePerimeters, Area: area, Holes: holes}
 }
 
 func constructRegionAndAppendUsed(point Point, grid [][]byte, usedCoordinates aoc.Set[Point]) Region {
