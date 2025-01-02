@@ -7,11 +7,12 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
 
-func MustAtoi(s string) int {
+func mustAtoi(s string) int {
 	val, _ := strconv.Atoi(s)
 	return val
 }
@@ -23,9 +24,7 @@ func getValue(v int, registers map[byte]int) int {
 	return registers[byte('A'+v%4)]
 }
 
-func SolveChronospatialInstructions(registers map[byte]int, instructions []int) string {
-	output := make([]int, 0)
-
+func createInstructionMap(output func(int)) map[int]func(int, map[byte]int, int) int {
 	instructionMap := make(map[int]func(int, map[byte]int, int) int)
 	instructionMap[0] = func(i int, reg map[byte]int, v int) int {
 		reg['A'] = int(float64(reg['A']) / math.Pow(2, float64(getValue(v, reg))))
@@ -55,7 +54,7 @@ func SolveChronospatialInstructions(registers map[byte]int, instructions []int) 
 	}
 
 	instructionMap[5] = func(i int, reg map[byte]int, v int) int {
-		output = append(output, getValue(v, reg)%8)
+		output(getValue(v, reg) % 8)
 		return i
 	}
 
@@ -69,11 +68,79 @@ func SolveChronospatialInstructions(registers map[byte]int, instructions []int) 
 		return i
 	}
 
+	return instructionMap
+}
+
+func solveInstructions(registers map[byte]int, instructions []int, instructionMap map[int]func(int, map[byte]int, int) int) {
 	for i := 0; i < len(instructions); i += 2 {
 		i = instructionMap[instructions[i]](i, registers, instructions[i+1])
 	}
+}
 
-	return strings.Join(fn.MustTransform(output, strconv.Itoa), ",")
+func SolveChronospatialInstructions(registers map[byte]int, instructions []int) string {
+	output := make([]int, 0)
+	instructionMap := createInstructionMap(func(value int) { output = append(output, value) })
+
+	solveInstructions(registers, instructions, instructionMap)
+
+	temp := strings.Join(fn.MustTransform(output, strconv.Itoa), ",")
+	return temp
+}
+
+func reversed(s []int) []int {
+	r := make([]int, 0, len(s))
+	r = append(r, s...)
+	slices.Reverse(r)
+	return r
+}
+
+func getOrDefault(i int, m map[int]int) int {
+	if val, ok := m[i]; ok {
+		return val
+	}
+	return 0
+}
+
+func FindSelf(instructions []int) int {
+	reversed := reversed(instructions)
+	registers := make(map[byte]int)
+
+	outputMonitor := 0
+	instructionMap := createInstructionMap(func(value int) {
+		outputMonitor = value
+		registers['A'] = 0
+	})
+
+	startAt := make(map[int]int)
+	regA := 0
+	for i := 0; i < len(reversed); i++ {
+		j := getOrDefault(i, startAt)
+		for ; j < 8; j++ {
+			registers['A'] = regA + j
+			registers['B'] = 0
+			registers['C'] = 0
+
+			solveInstructions(registers, instructions, instructionMap)
+
+			if outputMonitor == reversed[i] {
+				startAt[i] = j + 1
+				for k := range startAt {
+					if k > i {
+						startAt[k] = 0
+					}
+				}
+				regA = (regA + j) * 8
+				break
+			}
+		}
+
+		if j > 7 {
+			regA = regA/8 - (startAt[i-1] - 1)
+			i = i - 2
+		}
+	}
+
+	return regA / 8
 }
 
 func ParseInput(data string) (registers map[byte]int, instructions []int, err error) {
@@ -89,7 +156,7 @@ func ParseInput(data string) (registers map[byte]int, instructions []int, err er
 		if len(matches) != 2 {
 			return errors.New("bad input")
 		}
-		registers[reg] = MustAtoi(matches[1])
+		registers[reg] = mustAtoi(matches[1])
 		return nil
 	}
 
@@ -127,4 +194,5 @@ func main() {
 	}
 
 	fmt.Printf("Part 1: %s\n", SolveChronospatialInstructions(registers, instructions))
+	fmt.Printf("Part 2: %d\n", FindSelf(instructions))
 }
