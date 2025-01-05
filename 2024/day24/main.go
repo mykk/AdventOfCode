@@ -120,8 +120,7 @@ func ComputeZValue(values map[string]int, connections map[string]LogicGate, zVal
 	})
 }
 
-func getSusBitsMutable(values map[string]int, connections map[string]LogicGate, xValues, yValues, zValues []string) []int {
-	susBits := make([]int, 0)
+func findFirstBadBitMutable(values map[string]int, connections map[string]LogicGate, xValues, yValues, zValues []string) (bit int, found bool) {
 	carryOver := 0
 	for i, xValue := range xValues {
 		result := values[xValue] + values[yValues[i]] + carryOver
@@ -131,19 +130,19 @@ func getSusBitsMutable(values map[string]int, connections map[string]LogicGate, 
 
 		zValue := resolveValue(values, connections, zValues[i])
 		if resultValue != zValue {
-			susBits = append(susBits, i)
+			return i, true
 		}
 	}
-	return susBits
+	return 0, false
 }
 
-func getSusBits(values map[string]int, connections map[string]LogicGate, xValues, yValues, zValues []string) []int {
+func findFirstBadBit(values map[string]int, connections map[string]LogicGate, xValues, yValues, zValues []string) (bit int, found bool) {
 	unresolvedValues := make(map[string]int)
 	for key, val := range values {
 		unresolvedValues[key] = val
 	}
 
-	return getSusBitsMutable(unresolvedValues, connections, xValues, yValues, zValues)
+	return findFirstBadBitMutable(unresolvedValues, connections, xValues, yValues, zValues)
 }
 
 func findConnection(connections map[string]LogicGate, predicate func(connection LogicGate) bool) (string, bool) {
@@ -156,21 +155,18 @@ func findConnection(connections map[string]LogicGate, predicate func(connection 
 	return "", false
 }
 
-func isCurrentLevelXOR(connection string, connections map[string]LogicGate, xValues, yValues []string, level int) bool {
-	x := xValues[level]
-	y := yValues[level]
-
+func isCurrentBitXOR(connection string, connections map[string]LogicGate, xValues, yValues []string, bit int) bool {
 	if _, ok := connections[connection].(xorGate); !ok {
 		return false
 	}
 
 	a, b := connections[connection].operands()
-	return (a == x || b == x) && (a == y || b == y)
+	return (a == xValues[bit] || b == xValues[bit]) && (a == yValues[bit] || b == yValues[bit])
 }
 
-func isCurrentLevelAnd(connection string, connections map[string]LogicGate, xValues, yValues []string, level int) bool {
-	x := xValues[level]
-	y := yValues[level]
+func isCurrentBitAND(connection string, connections map[string]LogicGate, xValues, yValues []string, bit int) bool {
+	x := xValues[bit]
+	y := yValues[bit]
 
 	if _, ok := connections[connection].(andGate); !ok {
 		return false
@@ -180,189 +176,247 @@ func isCurrentLevelAnd(connection string, connections map[string]LogicGate, xVal
 	return (a == x || b == x) && (a == y || b == y)
 }
 
-func swapCurrentCarry(connectionKey string, connections map[string]LogicGate, xValues, yValues []string, level int) (string, string) {
-	key, found := findConnection(connections, func(connection LogicGate) bool {
+func fixCarryConnection(connectionKey string, connections map[string]LogicGate, xValues, yValues []string, bit int) (string, string) {
+	xANDy, found := findCurrentBitAND(connections, xValues, yValues, bit)
+	if !found {
+		panic("x xor y connection not found")
+	}
+
+	goodConnection, found := findConnection(connections, func(connection LogicGate) bool {
 		if _, ok := connection.(orGate); !ok {
 			return false
 		}
 		a, b := connection.operands()
-		return (a == xValues[level] || b == xValues[level]) && (a == yValues[level] || b == yValues[level])
+		return a == xANDy || b == xANDy
 	})
 	if !found {
-		panic("connection not found")
+		panic("or connection with x and y not found")
 	}
-	return connectionKey, key
+
+	connections[connectionKey], connections[goodConnection] = connections[goodConnection], connections[connectionKey]
+	return connectionKey, goodConnection
 }
 
-func swapCarryBit(connectionKey string, connections map[string]LogicGate, xValues, yValues []string, level int) (string, string) {
-	if level == -1 {
-		panic("going too deep")
+func findCurrentBitAND(connections map[string]LogicGate, xValues, yValues []string, index int) (string, bool) {
+	return findConnection(connections, func(connection LogicGate) bool {
+		if _, ok := connection.(andGate); !ok {
+			return false
+		}
+
+		a, b := connection.operands()
+		return (a == yValues[index] || b == yValues[index]) && (a == xValues[index] || b == xValues[index])
+	})
+}
+
+func fixCurrentBitAND(swapWith string, connections map[string]LogicGate, xValues, yValues []string, index int) (string, string) {
+	currentBitAnd, found := findCurrentBitAND(connections, xValues, yValues, index)
+	if !found {
+		panic("did not find xor connection of current bit x y")
+	}
+	connections[swapWith], connections[currentBitAnd] = connections[currentBitAnd], connections[swapWith]
+	return swapWith, currentBitAnd
+}
+
+func fixCarryPart2Connection(connectionKey string, connections map[string]LogicGate, xValues, yValues []string, bit int) (string, string) {
+	xXORy, found := findCurrentBitXOR(connections, xValues, yValues, bit)
+	if !found {
+		panic("x xor y connection not found")
+	}
+
+	goodConnection, found := findConnection(connections, func(connection LogicGate) bool {
+		if _, ok := connection.(andGate); !ok {
+			return false
+		}
+		a, b := connection.operands()
+		return a == xXORy || b == xXORy
+	})
+	if !found {
+		panic("and connection with x xor y not found")
+	}
+
+	connections[connectionKey], connections[goodConnection] = connections[goodConnection], connections[connectionKey]
+	return connectionKey, goodConnection
+}
+
+func fixCarryBitPart2(connectionKey string, connections map[string]LogicGate, xValues, yValues []string, bit int) (string, string) {
+	if _, ok := connections[connectionKey].(andGate); !ok {
+		return fixCarryPart2Connection(connectionKey, connections, xValues, yValues, bit)
+	}
+
+	a, b := connections[connectionKey].operands()
+
+	if isCurrentBitXOR(a, connections, xValues, yValues, bit) {
+		return fixCarryBit(b, connections, xValues, yValues, bit-1)
+	}
+
+	if isCurrentBitXOR(b, connections, xValues, yValues, bit) {
+		return fixCarryBit(a, connections, xValues, yValues, bit-1)
+	}
+
+	if isCorrectCarryBitConnection(a, connections, xValues, yValues, bit-1) {
+		return fixCurrentBitXor(b, connections, xValues, yValues, bit)
+	}
+
+	if isCorrectCarryBitConnection(b, connections, xValues, yValues, bit-1) {
+		return fixCurrentBitXor(a, connections, xValues, yValues, bit)
+	}
+
+	return fixCarryPart2Connection(connectionKey, connections, xValues, yValues, bit)
+}
+
+func fixCarryBit(connectionKey string, connections map[string]LogicGate, xValues, yValues []string, bit int) (string, string) {
+	if bit == 0 {
+		panic("nothing to fix here")
 	}
 
 	if _, ok := connections[connectionKey].(orGate); !ok {
-		return swapCurrentCarry(connectionKey, connections, xValues, yValues, level)
+		return fixCarryConnection(connectionKey, connections, xValues, yValues, bit)
 	}
 	connection := connections[connectionKey]
 
 	a, b := connection.operands()
 
-	if !isCurrentLevelAnd(a, connections, xValues, yValues, level) && !isCurrentLevelAnd(b, connections, xValues, yValues, level) {
-		return swapCurrentCarry(connectionKey, connections, xValues, yValues, level)
+	if isCurrentBitAND(a, connections, xValues, yValues, bit) {
+		return fixCarryBitPart2(b, connections, xValues, yValues, bit)
 	}
 
-	if isCurrentLevelAnd(a, connections, xValues, yValues, level) {
-		if _, ok := connections[b].(andGate); !ok {
-			swapWith, found := findConnection(connections, func(connection LogicGate) bool {
-				if _, ok := connection.(andGate); !ok {
-					return false
-				}
-
-				a, b := connection.operands()
-				return isCurrentLevelXOR(a, connections, xValues, yValues, level) || isCurrentLevelXOR(b, connections, xValues, yValues, level)
-			})
-			if !found {
-				panic("not found")
-			}
-			return b, swapWith
-		}
-
-		a1, b1 := connections[b].operands()
-		if !isCurrentLevelXOR(a1, connections, xValues, yValues, level) && !isCurrentLevelXOR(b1, connections, xValues, yValues, level) {
-			swapWith, found := findConnection(connections, func(connection LogicGate) bool {
-				if _, ok := connection.(andGate); !ok {
-					return false
-				}
-
-				a, b := connection.operands()
-				return isCurrentLevelXOR(a, connections, xValues, yValues, level) || isCurrentLevelXOR(b, connections, xValues, yValues, level)
-			})
-			if !found {
-				panic("not found")
-			}
-			return b, swapWith
-		}
-		if isCurrentLevelXOR(a1, connections, xValues, yValues, level) {
-			return swapCarryBit(a1, connections, xValues, yValues, level-1)
-		} else {
-			return swapCarryBit(b1, connections, xValues, yValues, level-1)
-		}
-	} else {
-		if _, ok := connections[a].(andGate); !ok {
-			swapWith, found := findConnection(connections, func(connection LogicGate) bool {
-				if _, ok := connection.(andGate); !ok {
-					return false
-				}
-
-				a, b := connection.operands()
-				return isCurrentLevelXOR(a, connections, xValues, yValues, level) || isCurrentLevelXOR(b, connections, xValues, yValues, level)
-			})
-			if !found {
-				panic("not found")
-			}
-			return a, swapWith
-		}
-
-		a1, b1 := connections[a].operands()
-		if !isCurrentLevelXOR(a1, connections, xValues, yValues, level) && !isCurrentLevelXOR(b1, connections, xValues, yValues, level) {
-			swapWith, found := findConnection(connections, func(connection LogicGate) bool {
-				if _, ok := connection.(andGate); !ok {
-					return false
-				}
-
-				a, b := connection.operands()
-				return isCurrentLevelXOR(a, connections, xValues, yValues, level) || isCurrentLevelXOR(b, connections, xValues, yValues, level)
-			})
-			if !found {
-				panic("not found")
-			}
-			return a, swapWith
-		}
-		if isCurrentLevelXOR(a1, connections, xValues, yValues, level) {
-			return swapCarryBit(a1, connections, xValues, yValues, level-1)
-		} else {
-			return swapCarryBit(b1, connections, xValues, yValues, level-1)
-		}
+	if isCurrentBitAND(b, connections, xValues, yValues, bit) {
+		return fixCarryBitPart2(a, connections, xValues, yValues, bit)
 	}
+
+	if isCorrectCarryBitPart2(connections[a], connections, xValues, yValues, bit) {
+		return fixCurrentBitAND(b, connections, xValues, yValues, bit)
+	}
+
+	if isCorrectCarryBitPart2(connections[b], connections, xValues, yValues, bit) {
+		return fixCurrentBitAND(a, connections, xValues, yValues, bit)
+	}
+
+	return fixCarryConnection(connectionKey, connections, xValues, yValues, bit)
 }
 
-func swapCurrent(connections map[string]LogicGate, xValues, yValues, zValues []string, badBitIndex int) (string, string) {
-	xyXOR, found := findConnection(connections, func(connection LogicGate) bool {
+func findCurrentBitXOR(connections map[string]LogicGate, xValues, yValues []string, index int) (string, bool) {
+	return findConnection(connections, func(connection LogicGate) bool {
 		if _, ok := connection.(xorGate); !ok {
 			return false
 		}
 
 		a, b := connection.operands()
-		return (a == yValues[badBitIndex] || b == yValues[badBitIndex]) && (a == xValues[badBitIndex] || b == xValues[badBitIndex])
+		return (a == yValues[index] || b == yValues[index]) && (a == xValues[index] || b == xValues[index])
 	})
+}
+
+func fixCurrentBitXor(swapWith string, connections map[string]LogicGate, xValues, yValues []string, index int) (string, string) {
+	currentBitXor, found := findCurrentBitXOR(connections, xValues, yValues, index)
 	if !found {
-		panic("not found x XOR y")
+		panic("did not find xor connection of current bit x y")
+	}
+	connections[swapWith], connections[currentBitXor] = connections[currentBitXor], connections[swapWith]
+	return swapWith, currentBitXor
+}
+
+func isCorrectCarryBitPart2(connection LogicGate, connections map[string]LogicGate, xValues, yValues []string, index int) bool {
+	if _, ok := connection.(andGate); !ok {
+		return false
 	}
 
-	badZ := zValues[badBitIndex]
+	a, b := connection.operands()
 
-	key, found := findConnection(connections, func(connection LogicGate) bool {
+	if isCurrentBitXOR(a, connections, xValues, yValues, index) {
+		return isCorrectCarryBitConnection(b, connections, xValues, yValues, index-1)
+	}
+
+	if isCurrentBitXOR(b, connections, xValues, yValues, index) {
+		return isCorrectCarryBitConnection(a, connections, xValues, yValues, index-1)
+	}
+
+	return false
+}
+
+func isCorrectCarryBitConnection(connection string, connections map[string]LogicGate, xValues, yValues []string, index int) bool {
+	if index == 0 {
+		return isCurrentBitAND(connection, connections, xValues, yValues, index)
+	}
+
+	if _, ok := connections[connection].(orGate); !ok {
+		return false
+	}
+
+	a, b := connections[connection].operands()
+
+	if isCurrentBitAND(a, connections, xValues, yValues, index) {
+		return isCorrectCarryBitPart2(connections[b], connections, xValues, yValues, index)
+	}
+
+	if isCurrentBitAND(b, connections, xValues, yValues, index) {
+		return isCorrectCarryBitPart2(connections[a], connections, xValues, yValues, index)
+	}
+
+	return false
+}
+
+func fixBadZConnection(connections map[string]LogicGate, xValues, yValues, zValues []string, badBitIndex int) (string, string) {
+	xXORy, found := findCurrentBitXOR(connections, xValues, yValues, badBitIndex)
+	if !found {
+		panic("x xor y connection not found")
+	}
+
+	goodZ, found := findConnection(connections, func(connection LogicGate) bool {
 		if _, ok := connection.(xorGate); !ok {
 			return false
 		}
 		a, b := connection.operands()
-		return a == xyXOR || b == xyXOR
+		return a == xXORy || b == xXORy
 	})
 	if !found {
-		panic("not found")
+		panic("xor connection with x xor y not found")
 	}
-	connections[badZ], connections[key] = connections[key], connections[badZ]
-	return badZ, key
+
+	badZ := zValues[badBitIndex]
+	connections[badZ], connections[goodZ] = connections[goodZ], connections[badZ]
+	return badZ, goodZ
 }
 
-func swapConnection(connections map[string]LogicGate, xValues, yValues, zValues []string, badBitIndex int) (string, string) {
+func fixConnection(connections map[string]LogicGate, xValues, yValues, zValues []string, badBitIndex int) (string, string) {
 	badZ := zValues[badBitIndex]
-	susConnection := connections[badZ]
+	badConnection := connections[badZ]
 
-	switch susConnection.(type) {
-	case orGate, andGate:
-		{
-			return swapCurrent(connections, xValues, yValues, zValues, badBitIndex)
-		}
-	case xorGate:
-		{
-			if true {
-				connections["tqr"], connections["hth"] = connections["hth"], connections["tqr"]
-				return "tqr", "hth"
-			}
-
-			a, b := susConnection.operands()
-
-			if !isCurrentLevelXOR(a, connections, xValues, yValues, badBitIndex) && !isCurrentLevelXOR(b, connections, xValues, yValues, badBitIndex) {
-				return swapCurrent(connections, xValues, yValues, zValues, badBitIndex)
-			}
-
-			if isCurrentLevelXOR(a, connections, xValues, yValues, badBitIndex) {
-				return swapCarryBit(b, connections, xValues, yValues, badBitIndex-1)
-			} else {
-				return swapCarryBit(a, connections, xValues, yValues, badBitIndex-1)
-			}
-		}
+	if _, ok := badConnection.(xorGate); !ok {
+		return fixBadZConnection(connections, xValues, yValues, zValues, badBitIndex)
 	}
 
-	panic("not resolved anything")
+	a, b := badConnection.operands()
+
+	if isCurrentBitXOR(a, connections, xValues, yValues, badBitIndex) {
+		return fixCarryBit(b, connections, xValues, yValues, badBitIndex-1)
+	}
+
+	if isCurrentBitXOR(b, connections, xValues, yValues, badBitIndex) {
+		return fixCarryBit(a, connections, xValues, yValues, badBitIndex-1)
+	}
+
+	if isCorrectCarryBitConnection(a, connections, xValues, yValues, badBitIndex-1) {
+		return fixCurrentBitXor(b, connections, xValues, yValues, badBitIndex)
+	}
+
+	if isCorrectCarryBitConnection(b, connections, xValues, yValues, badBitIndex-1) {
+		return fixCurrentBitXor(a, connections, xValues, yValues, badBitIndex)
+	}
+
+	return fixBadZConnection(connections, xValues, yValues, zValues, badBitIndex)
 }
 
 func FindSwappedWires(values map[string]int, connections map[string]LogicGate, xValues, yValues, zValues []string) string {
 	swaps := make([]string, 0)
 
-	susBits := getSusBits(values, connections, xValues, yValues, zValues)
-
-	for len(susBits) != 0 {
-		swapA, swapB := swapConnection(connections, xValues, yValues, zValues, susBits[0])
-
-		swaps = append(swaps, swapA)
-		swaps = append(swaps, swapB)
-
-		susBits = getSusBits(values, connections, xValues, yValues, zValues)
+	for {
+		if bit, found := findFirstBadBit(values, connections, xValues, yValues, zValues); found {
+			swapA, swapB := fixConnection(connections, xValues, yValues, zValues, bit)
+			swaps = append(swaps, swapA, swapB)
+		} else {
+			return strings.Join(fn.Sorted(swaps, func(a, b string) bool { return a < b }), ",")
+		}
 	}
-
-	swaps = fn.Sorted(swaps, func(a, b string) bool { return a < b })
-	return strings.Join(swaps, ",")
 }
 
 func main() {
